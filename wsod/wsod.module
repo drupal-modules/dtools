@@ -1,0 +1,486 @@
+<?php
+/*
+	version: $Id$
+	author: kenorb@gmail.com
+*/
+
+/**
+ * Implementation of hook_boot(). Runs even for cached pages.
+ */
+function wsod_boot() {
+    register_shutdown_function('wsod_check_wsod');
+} 
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function wsod_form_alter($form, $form_state, $form_id) {
+    global $active_forms;
+    $active_forms[] = $form_id;
+}
+
+/**
+ * Detect WSOD and fix it
+ * 
+ * @param bool $verbose
+ * @param bool $fix_on_fly
+ * @return string
+ * 
+ */
+function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
+    static $drupal_path;
+    // CHECK FOR FATAL ERRORS (which Drupal can't handle)
+    if (wsod_fatal_error_checker($output, $fix_on_fly)) {
+        $verbose ? print $output : print 'n/a' ;
+        return; // can't continue, if there is some fatal error
+    }
+
+    // check if we are on html page
+    $header = wsod_get_header_content_type();
+    if (strpos($header, 'text/html') === FALSE) {
+        return; // exit if we are on not html page
+    }
+
+    // init variables
+    $output = '';
+    $nl = t('<br>');
+    $txt_enable_fix_on_fly = t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
+
+    /* set base Drupal path as current especially during shutdown */
+    if (!wsod_drupal_path()) { // change it if it's wrong
+        $drupal_path = wsod_detect_drupal_path(drupal_get_path('module', 'node')); // FIXME: Any other function which returns current Drupal path?
+        !empty($drupal_path) ? chdir($drupal_path) : NULL; // change dir to Drupal path
+    }
+
+    module_load_include('inc', 'wsod', 'wsod'); // include functions
+
+    // check input variables
+    $path = !empty($_GET['path']) ? $_GET['path'] : $_GET['q'];
+    isset($_GET['fix']) ? $fix_on_fly = TRUE : NULL; // if fix is defined, then switch to fixing mode
+
+    /* check menu handler */
+    $return = menu_execute_active_handler($path);
+
+    if (is_null($return)) { /* check menu handler */
+        $output .= t("%function: returned %handler - it's very bad!", array('%function' => 'menu_execute_active_handler()', '%handler' => 'NULL')).$nl;
+        $output .= t("WSOD detected!").t('&nbsp;').t("Checking for problems...").$nl;
+        $output .= t("ERROR: %function returned empty value!", array('%function' => 'menu_execute_active_handler()')).$nl;
+        /* check theme hooks */
+        $res = wsod_validate_theme_hooks($verbose, $output);
+        if (!$res) {
+            $fix_on_fly ? wsod_clear_caches() : NULL; // clear all caches
+            $output .= t("Re-testing...").$nl;
+            $res = wsod_validate_theme_hooks($verbose, $output);
+            if (!$res) {
+                $output .= t("There is still problem related to theme hooks").$nl; // FIXME
+            } else {
+                $output .= t("Fixed?!").$nl;
+            }
+        } else {
+            $output .= t("Validation theme hooks completed.").$nl;
+        }
+        /* check menu router hooks */
+        $router_item = menu_get_item($path); // get router item
+        if (!function_exists($router_item['page_callback'])) { // check if page callback exist
+            $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
+        } else {
+            $content = wsod_check_page_callback($router_item, $verbose, $output); // get content of page callback
+            if (empty($content)) { // check if page callback returned some content
+                $output .= t("ERROR: Callback: %callback() returned empty content!",array('%callback' => $router_item['page_callback'])).$nl;
+                $output .= t("NOTICE: router_item = %item!",array('%item' => print_r($router_item,true))).$nl;
+                if ($fix_on_fly) { // if fix mode, then fix the errors
+                    module_load_include('inc', 'system', 'system.admin'); // include functions
+                    $output .= wsod_clear_caches(); // clear all caches
+                    module_rebuild_cache();
+                    $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
+                }
+            }
+        }
+        /* check forms */
+        /* TODO
+        $invalid_forms = wsod_check_forms();
+	if (!empty($invalid_forms)) {
+	    $output .= "empty forms = ".print_r($invalid_forms,true)."<br>";
+	}
+         */
+
+
+        // PRINT ALL ERRORS WHICH WILL HELP TO IDENTIFY THE PROBLEM
+        if ($_SESSION['messages']['error']) {
+            $error_messages = $_SESSION['messages']['error'];
+            foreach ($error_messages as $error) {
+                $error = str_replace(dirname($drupal_path),'',$error); // delete Drupal full path for security reason
+                print_r($error,true); // show errors
+            }
+        }
+        $output .= t("Done.").$nl;
+    } else {
+      switch ($return) {
+	case MENU_NOT_FOUND:
+            /* Normal behavior. Print nothing */
+	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl;
+	    break;
+	case MENU_ACCESS_DENIED:
+            /* Normal behavior. Print nothing */
+	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl;
+	    break;
+	case MENU_SITE_OFFLINE:
+            /* Normal behavior. Print nothing */
+	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl;
+	    break;
+        default: // other cases
+            /* Normal behavior. Print nothing */
+	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'PAGE_NOT_FOUND')).$nl;
+            /* TODO: Sometimes can't render page on shutdown, because of some errors recently
+                Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
+            $page = theme('page', $return);
+            if (empty($page)) {
+                $err = t('ERROR: Page is empty!').$nl;
+            }
+             */
+      }
+    }
+    $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
+    if (!empty($output)) {
+        watchdog('wsod', $output); // log the error
+    }
+    return $output;
+}
+
+/**
+ * Clear all caches
+ */
+function wsod_clear_caches() {
+    $output = '';
+    $nl = t('<br>');
+    cache_clear_all(NULL, 'cache');
+    $output .= t("Cleared cache via %function", array('%function' => 'cache_clear_all()')).$nl;
+    drupal_flush_all_caches();
+    $output .= t("Cleared cache via %function", array('%function' => 'drupal_flush_all_caches()')).$nl;
+    return $output;
+}
+
+/**
+ * Check for fatal errors
+ */
+function wsod_fatal_error_checker(&$output = NULL, $fix_on_fly = TRUE) {
+    // CHECK FOR FATAL ERRORS (which Drupal can't handle)
+    $isError = FALSE;
+    if ($error = error_get_last()){
+        switch($error['type']){
+            case E_ERROR:
+            case E_CORE_ERROR:
+            case E_COMPILE_ERROR:
+            case E_USER_ERROR:
+                $isError = TRUE;
+                break;
+        }
+        /* Show fatal error on the page.
+           Most people don't use this module, if they don't have any problem,
+           so our priority is to show what's wrong with the website
+         */
+        if ($isError){
+            var_dump($error);
+            wsod_fatal_error_fix($error['message'], $output, $fix_on_fly); // check if we can fix handled error
+            $output .= "Script execution halted with error: {$error['message']}<br>";
+        } else {
+            $output .= "Script execution completed with error: {$error['message']}<br>";
+        }
+    }
+    return $isError;
+}
+
+/**
+ * Try to fix fatal error
+ */
+function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
+    if (strpos($error,"Cannot redeclare cache") !== FALSE) {
+        if ($fix_on_fly) { // if fix mode, then fix the errors
+            /* TODO: We can't use Drupal functions in case of fatal error
+            module_load_include('inc', 'system', 'system.admin'); // include functions
+            $output .= t('Trying to rebuild module cache.'); // module rebuild cache
+            module_rebuild_cache();
+             */
+        }
+        $output .= 'Tip: Try to disable additional cache module from your settings.php.<br>\n';
+    } else if (strpos($error,"Cannot redeclare") !== FALSE) {
+        if ($fix_on_fly) { // if fix mode, then fix the errors
+            /* TODO: We can't use Drupal functions in case of fatal error
+            module_load_include('inc', 'system', 'system.admin'); // include functions
+            $output .= t('Trying to rebuild module cache.'); // module rebuild cache
+            module_rebuild_cache();
+             */
+        }
+    }
+}
+
+function wsod_check_forms() {
+    global $active_forms;
+    $active_forms=array_unique($active_forms); // remove duplicates
+    $empty_forms = array();
+    $form_state = array ('storage' => NULL, 'submitted' => FALSE, 'post' => array ());
+    $node = array ('storage' => NULL, 'submitted' => FALSE, 'post' => array ());
+    $max_count = count($active_forms); // get count of array
+    foreach ($active_forms as $key => $form_id) {
+	$id = $form_id;
+	//$form = drupal_get_form($id); //$form = drupal_retrieve_form($form_id, $form_state);
+
+	$form = drupal_retrieve_form($form_id, $form_state);
+	module_invoke_all('form_alter', $form);
+	if (empty($form)) {
+	    $empty_forms[] = $form_id;
+	}
+
+	//$form_content = drupal_render_form($form_id, $form);
+	$form_content = drupal_get_form($form_id);
+	if (empty($form_content)) {
+	    $empty_forms[] = $form_content;
+	}
+
+	if ($key > $max_count+1) {
+	    print "Recurrency detected in form_alter hook!<br>";
+	    break;
+	}
+    }
+    return array_unique($empty_forms);
+}
+
+
+/** 
+ * Detect Drupal path by scanning each level of current path
+ * 
+ */ 
+function wsod_detect_drupal_path(&$output = NULL, $start_dir = __FILE__) {
+    $drupal_path = FALSE; // set init variable
+    $path_arr = wsod_pathposall(dirname($start_dir));
+    $bootstrap_file = '/includes/bootstrap.inc';
+    foreach ($path_arr as $path) {
+        if (file_exists($path.$bootstrap_file)) {
+            $drupal_path = $path;
+        } else {
+            $output .= "Couldn't find $path$bootstrap_file!<br>\n";
+        }
+    }
+    return $drupal_path;
+}
+
+/** 
+ * pathposall 
+ * 
+ * Find all occurrences of a subdirs in a path
+ * 
+ * @param string $dir
+ * @return array
+ */ 
+function wsod_pathposall($dir){ 
+    $slash = wsod_detect_filesystem_slash();
+    $pos = wsod_strposall($dir,$slash);
+    foreach ($pos as $no) {
+        $subdir[] = substr($dir, 0, $no);
+    }
+    if (is_array($subdir)) {
+        rsort($subdir); // make list in reverse
+        return $subdir; // return array of available subdir paths
+    } else {
+        return array();
+    }
+} 
+
+/** 
+ * Find all occurrences of a needle in a haystack 
+ * 
+ * @param string $haystack 
+ * @param string $needle 
+ * @return array or false 
+ */ 
+function wsod_strposall($haystack,$needle){ 
+    $s=0; $i=0; 
+    while (is_integer($i)){ 
+        $i = strpos($haystack,$needle,$s); 
+        if (is_integer($i)) { 
+            $aStrPos[] = $i; 
+            $s = $i+strlen($needle); 
+        } 
+    } 
+    if (isset($aStrPos)) { 
+        return $aStrPos; 
+    } else { 
+        return false; 
+    } 
+} 
+
+/** 
+ * Detect slash type of filesystem
+ * 
+ */ 
+function wsod_detect_filesystem_slash() {
+    if (strpos(__FILE__, '/') !== FALSE) { // detect filesystem
+        return '/'; // Unix style
+    } else {
+        return '\\'; // Windows style
+    }
+}
+
+/**
+ * Check if Drupal is in current path
+ * 
+ */
+function wsod_drupal_path() {
+    $path = getcwd();
+    $bootstrap_file = '/includes/bootstrap.inc';
+    return file_exists($path.$bootstrap_file);
+}
+
+/**
+ * Get content type of page header 
+ * 
+ * @return string
+ * 
+ */
+function wsod_get_header_content_type($header = 'text/html') {
+    $headers = explode("\n", drupal_get_headers());
+    $ct_key = 'Content-Type: ';
+    foreach ($headers as $header_line) {
+        if (($pos = strpos($ct_key, $header_line)) === FALSE) {
+            $header = substr($header_line, $pos+strlen($ct_key));
+        }
+    }
+    return $header;
+}
+
+/**
+ * Get content type of page header 
+ * 
+ * @return string
+ * 
+ */
+function wsod_sess_close() {
+    wsod_check_wsod();
+    return TRUE;
+}
+
+/**
+ * WSOD version of Drupal drupal_bootstrap()
+ */
+function wsod_drupal_bootstrap_run($phase) {
+  static $phases = array(DRUPAL_BOOTSTRAP_CONFIGURATION, DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE, DRUPAL_BOOTSTRAP_DATABASE, DRUPAL_BOOTSTRAP_ACCESS, DRUPAL_BOOTSTRAP_SESSION, DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE, DRUPAL_BOOTSTRAP_LANGUAGE, DRUPAL_BOOTSTRAP_PATH, DRUPAL_BOOTSTRAP_FULL), $phase_index = 0;
+
+  while ($phase >= $phase_index && isset($phases[$phase_index])) {
+    $current_phase = $phases[$phase_index];
+    unset($phases[$phase_index++]);
+    wsod_drupal_bootstrap($current_phase);
+  }
+}
+
+/**
+ * WSOD version of Drupal _drupal_bootstrap()
+ *
+ * Modifications:
+ * - replace handler sess_close() by WSOD
+ *   Some fatal errors can't be handled by set_error_handler(), but can be handled by session_set_save_handler()
+ *
+ * @param $phase
+ *   A constant. Allowed values are:
+ *     DRUPAL_BOOTSTRAP_CONFIGURATION: initialize configuration.
+ *     DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE: try to call a non-database cache fetch routine.
+ *     DRUPAL_BOOTSTRAP_DATABASE: initialize database layer.
+ *     DRUPAL_BOOTSTRAP_ACCESS: identify and reject banned hosts.
+ *     DRUPAL_BOOTSTRAP_SESSION: initialize session handling.
+ *     DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE: load bootstrap.inc and module.inc, start
+ *       the variable system and try to serve a page from the cache.
+ *     DRUPAL_BOOTSTRAP_LANGUAGE: identify the language used on the page.
+ *     DRUPAL_BOOTSTRAP_PATH: set $_GET['q'] to Drupal path of request.
+ *     DRUPAL_BOOTSTRAP_FULL: Drupal is fully loaded, validate and fix input data.
+ */
+function wsod_drupal_bootstrap($phase) {
+  global $conf;
+
+  switch ($phase) {
+
+    case DRUPAL_BOOTSTRAP_CONFIGURATION:
+      drupal_unset_globals();
+      // Start a page timer:
+      timer_start('page');
+      // Initialize the configuration
+      conf_init();
+      break;
+
+    case DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE:
+      // Allow specifying special cache handlers in settings.php, like
+      // using memcached or files for storing cache information.
+      require_once variable_get('cache_inc', './includes/cache.inc');
+      // If the page_cache_fastpath is set to TRUE in settings.php and
+      // page_cache_fastpath (implemented in the special implementation of
+      // cache.inc) printed the page and indicated this with a returned TRUE
+      // then we are done.
+      if (variable_get('page_cache_fastpath', FALSE) && page_cache_fastpath()) {
+        exit;
+      }
+      break;
+
+    case DRUPAL_BOOTSTRAP_DATABASE:
+      // Initialize the default database.
+      require_once './includes/database.inc';
+      db_set_active();
+      break;
+
+    case DRUPAL_BOOTSTRAP_ACCESS:
+      // Deny access to hosts which were banned - t() is not yet available.
+      if (drupal_is_denied('host', ip_address())) {
+        header('HTTP/1.1 403 Forbidden');
+        print 'Sorry, '. check_plain(ip_address()) .' has been banned.';
+        exit();
+      }
+      break;
+
+    case DRUPAL_BOOTSTRAP_SESSION:
+      require_once variable_get('session_inc', './includes/session.inc');
+      session_set_save_handler('sess_open', 'wsod_sess_close', 'sess_read', 'sess_write', 'sess_destroy_sid', 'sess_gc'); // WSOD: replace wsod handle for sess_close()
+      if(!isset($_SESSION)){ // WSOD: additional condition if session has been already started
+          session_start();
+      }
+      break;
+
+    case DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE:
+      // Initialize configuration variables, using values from settings.php if available.
+      $conf = variable_init(isset($conf) ? $conf : array());
+      $cache_mode = variable_get('cache', CACHE_DISABLED);
+      // Get the page from the cache.
+      $cache = $cache_mode == CACHE_DISABLED ? '' : page_get_cache();
+      // If the skipping of the bootstrap hooks is not enforced, call hook_boot.
+      if (!$cache || $cache_mode != CACHE_AGGRESSIVE) {
+        // Load module handling.
+        require_once './includes/module.inc';
+        bootstrap_invoke_all('boot');
+      }
+      // If there is a cached page, display it.
+      if ($cache) {
+        drupal_page_cache_header($cache);
+        // If the skipping of the bootstrap hooks is not enforced, call hook_exit.
+        if ($cache_mode != CACHE_AGGRESSIVE) {
+          bootstrap_invoke_all('exit');
+        }
+        // We are done.
+        exit;
+      }
+      // Prepare for non-cached page workflow.
+      drupal_page_header();
+      break;
+
+    case DRUPAL_BOOTSTRAP_LANGUAGE:
+      drupal_init_language();
+      break;
+
+    case DRUPAL_BOOTSTRAP_PATH:
+      require_once './includes/path.inc';
+      // Initialize $_GET['q'] prior to loading modules and invoking hook_init().
+      drupal_init_path();
+      break;
+
+    case DRUPAL_BOOTSTRAP_FULL:
+      require_once './includes/common.inc';
+      _drupal_bootstrap_full();
+      break;
+  }
+}
+

@@ -1,0 +1,7 @@
+; $Id$
+name = "Bench Chart Helper"
+description = "Needed by Bench Chart module"
+package = "Development"
+core = 6.x
+version = "6.x-1.x-dev" 
+

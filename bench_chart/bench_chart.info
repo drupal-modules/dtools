@@ -1,0 +1,9 @@
+; $Id$
+name = "Bench Chart"
+description = "Show statistics for hook execution"
+dependencies[] = bench_chart_helper
+dependencies[] = charts
+package = "Development"
+core = 6.x
+version = "6.x-1.x-dev" 
+

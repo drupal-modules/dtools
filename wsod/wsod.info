@@ -1,0 +1,7 @@
+; $Id$
+name = "WSOD (White Screen of Death)"
+description = "Detect white screen of death and diagnoze what's the reason"
+package = "Development"
+core = 6.x
+version = "6.x-1.x-dev" 
+
