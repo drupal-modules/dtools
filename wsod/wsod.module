@@ -59,7 +59,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     isset($_GET['fix']) ? $fix_on_fly = TRUE : NULL; // if fix is defined, then switch to fixing mode
 
     /* check menu handler */
-    $return = menu_execute_active_handler($path);
+    $return = menu_execute_active_handler(); // use q argument to change default path
     // CHECK FOR FATAL ERRORS again
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $verbose ? print $output : print 'n/a' ;
