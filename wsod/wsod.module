@@ -41,6 +41,11 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         return; // exit if we are on not html page
     }
 
+    // ignore wsod checking on batch processing, it breaking the forms (#416616)
+    if (isset($_SESSION['batch_form_state'])) {
+        return;
+    }
+
     // init variables
     $output = '';
     $nl = t('<br>');
