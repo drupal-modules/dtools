@@ -44,7 +44,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     // init variables
     $output = '';
     $nl = t('<br>');
-    $txt_enable_fix_on_fly = t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
 
     /* set base Drupal path as current especially during shutdown */
     if (!wsod_drupal_path()) { // change it if it's wrong
@@ -73,13 +72,17 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         /* check theme hooks */
         $res = wsod_validate_theme_hooks($verbose, $output);
         if (!$res) {
-            $fix_on_fly ? wsod_clear_caches() : NULL; // clear all caches
-            $output .= t("Re-testing...").$nl;
-            $res = wsod_validate_theme_hooks($verbose, $output);
-            if (!$res) {
-                $output .= t("There is still problem related to theme hooks").$nl; // FIXME
+            if ($fix_on_fly) {
+                wsod_clear_caches(); // clear all caches
+                $output .= t("Re-testing...").$nl;
+                $res = wsod_validate_theme_hooks($verbose, $output);
+                if (!$res) {
+                    $output .= t("There is still problem related to theme hooks").$nl; // FIXME
+                } else {
+                    $output .= t("Fixed?!").$nl;
+                }
             } else {
-                $output .= t("Fixed?!").$nl;
+                $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
             }
         } else {
             $output .= t("Validation theme hooks completed.").$nl;
@@ -98,6 +101,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     $output .= wsod_clear_caches(); // clear all caches
                     module_rebuild_cache();
                     $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
+                } else {
+                    $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
                 }
             }
         }
@@ -264,6 +269,9 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
                     Propose to user to install missing module (get module name from $error).
              */
         }
+    }
+    if (!$fix_on_fly) {
+        $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
     }
 }
 
