@@ -117,6 +117,12 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
     } else {
       switch ($return) {
 	case MENU_NOT_FOUND:
+            $page_output = drupal_not_found(); // return page not found, there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+            }
             /* Normal behavior. Print nothing */
 	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl;
 	    break;
