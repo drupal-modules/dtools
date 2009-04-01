@@ -247,6 +247,23 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
             module_rebuild_cache();
              */
         }
+    } else if (strpos($error,"Call to undefined function") !== FALSE) {
+        if ($fix_on_fly) { // if fix mode, then fix the errors
+            /* TODO:
+                Solution 1:
+                    We can load all module files and check where it's defined.
+                    After that we can compare and check if the module weight is correct.
+                    Needed module can be detected from $error via function name.
+                    Dependend module can be detected via filename $error['file']
+                    Fix: we can increase weight of the module depends of the other module.
+                    Example code:
+                        $weight = (int) db_result(db_query("SELECT weight FROM {system} WHERE name = 'module1'"));
+                        db_query("UPDATE {system} SET weight = %d WHERE name = 'module2'", $weight + 1);
+                Solution 2:
+                    If module with specified function wasn't found, maybe there is wrong dependency.
+                    Propose to user to install missing module (get module name from $error).
+             */
+        }
     }
 }
 
