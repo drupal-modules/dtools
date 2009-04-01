@@ -55,7 +55,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
     module_load_include('inc', 'wsod', 'wsod'); // include functions
 
     // check input variables
-    $path = !empty($_GET['path']) ? $_GET['path'] : $_GET['q'];
+    $path = $_GET['q'];
     isset($_GET['fix']) ? $fix_on_fly = TRUE : NULL; // if fix is defined, then switch to fixing mode
 
     /* check menu handler */
