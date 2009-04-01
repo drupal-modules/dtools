@@ -27,9 +27,9 @@ function wsod_form_alter($form, $form_state, $form_id) {
  * @return string
  * 
  */
-function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
+function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE) {
     static $drupal_path;
-    // CHECK FOR FATAL ERRORS (which Drupal can't handle)
+    // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $verbose ? print $output : print 'n/a' ;
         return; // can't continue, if there is some fatal error
@@ -60,6 +60,11 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
 
     /* check menu handler */
     $return = menu_execute_active_handler($path);
+    // CHECK FOR FATAL ERRORS again
+    if (wsod_fatal_error_checker($output, $fix_on_fly)) {
+        $verbose ? print $output : print 'n/a' ;
+        return; // can't continue, if there is some fatal error
+    }
 
     if (is_null($return)) { /* check menu handler */
         $output .= t("%function: returned %handler - it's very bad!", array('%function' => 'menu_execute_active_handler()', '%handler' => 'NULL')).$nl;
@@ -104,7 +109,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
 	}
          */
 
-
         // PRINT ALL ERRORS WHICH WILL HELP TO IDENTIFY THE PROBLEM
         if ($_SESSION['messages']['error']) {
             $error_messages = $_SESSION['messages']['error'];
@@ -115,6 +119,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
         }
         $output .= t("Done.").$nl;
     } else {
+      /* Standard Drupal behavior section. */
       switch ($return) {
 	case MENU_NOT_FOUND:
             $page_output = drupal_not_found(); // return page not found, there can be some status error messages
@@ -122,28 +127,53 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
                 $err = t('ERROR: Page is empty!').$nl;
             } else {
                 $output .= $page_output; // if nothing to show, output standard page not found
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl);
+                }
             }
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl;
 	    break;
 	case MENU_ACCESS_DENIED:
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl;
+            $page_output = drupal_access_denied(); // return permission denied page , there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl);
+                }
+            }
 	    break;
 	case MENU_SITE_OFFLINE:
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl;
+            $page_output = drupal_site_offline(); // return site offline page, there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl);
+                }
+            }
 	    break;
         default: // other cases
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'PAGE_NOT_FOUND')).$nl;
-            /* TODO: Sometimes can't render page on shutdown, because of some errors recently
-                Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
-            $page = theme('page', $return);
-            if (empty($page)) {
-                $err = t('ERROR: Page is empty!').$nl;
+            if (module_exists('content_profile')) {
+                /* TODO: Sometimes can't render page on shutdown, because of some errors recently
+                    Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
+                 */
+                break;
             }
-             */
+            $page_output = theme('page', $return); // return page not found, there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => "$return")).$nl);
+                }
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+            }
       }
     }
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
@@ -188,9 +218,9 @@ function wsod_fatal_error_checker(&$output = NULL, $fix_on_fly = TRUE) {
         if ($isError){
             var_dump($error);
             wsod_fatal_error_fix($error['message'], $output, $fix_on_fly); // check if we can fix handled error
-            $output .= "Script execution halted with error: {$error['message']}<br>";
+            $output .= "ERROR: Script execution halted with error: {$error['message']}<br>";
         } else {
-            $output .= "Script execution completed with error: {$error['message']}<br>";
+            $output .= "NOTICE: Script execution completed with error: {$error['message']}<br>";
         }
     }
     return $isError;
