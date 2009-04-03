@@ -32,17 +32,31 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $verbose ? print $output : print 'n/a' ;
-        return; // can't continue, if there is some fatal error
+        return; // can't continue, if there are some fatal errors
     }
 
-    // check if we are on html page
-    $header = wsod_get_header_content_type();
-    if (strpos($header, 'text/html') === FALSE) {
-        return; // exit if we are on not html page
+    // ignore wsod checking on batch processing and maintenance work
+    if (defined('MAINTENANCE_MODE') || isset($_SESSION['batch_form_state'])) {
+        return;
     }
 
-    // ignore wsod checking on batch processing, it breaking the forms (#416616)
-    if (isset($_SESSION['batch_form_state'])) {
+    // ignore wsod checking on POST forms, it breaking the forms (#416616) (TODO: later it could be supported - )
+    if (!empty($_POST['form_build_id'])) {
+        return;
+    }
+
+    // ignore if we are on non-html page
+    $headers = drupal_get_headers(); // FIXME: any other way to get headers?
+    $ignore_formats = array('xml', 'javascript', 'json', 'plain', 'image', 'application', 'csv', 'x-comma-separated-values');
+        foreach ($ignore_formats as $format) {
+        if (strstr($headers, $format)) {
+            return;
+        }
+    }
+
+    // ignore some specified callbacks (like Rebuilding permissions)
+    $router_item = menu_get_item();
+    if ($router_item['page_callback'] == 'system_batch_page') {
         return;
     }
 
@@ -63,7 +77,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     isset($_GET['fix']) ? $fix_on_fly = TRUE : NULL; // if fix is defined, then switch to fixing mode
 
     /* check menu handler */
+    ob_start();
     $return = menu_execute_active_handler(); // use q argument to change default path
+    $content_output = ob_get_clean(); // TODO: what if there is some content?
     // CHECK FOR FATAL ERRORS again
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $verbose ? print $output : print 'n/a' ;
@@ -79,6 +95,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         if (!$res) {
             if ($fix_on_fly) {
                 wsod_clear_caches(); // clear all caches
+                module_rebuild_cache(); // rebuild paths in system table
                 $output .= t("Re-testing...").$nl;
                 $res = wsod_validate_theme_hooks($verbose, $output);
                 if (!$res) {
@@ -97,7 +114,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         if (!function_exists($router_item['page_callback'])) { // check if page callback exist
             $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
         } else {
-            $content = wsod_check_page_callback($router_item, $verbose, $output); // get content of page callback
+            wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
             if (empty($content)) { // check if page callback returned some content
                 $output .= t("ERROR: Callback: %callback() returned empty content!",array('%callback' => $router_item['page_callback'])).$nl;
                 $output .= t("NOTICE: router_item = %item!",array('%item' => print_r($router_item,true))).$nl;
@@ -119,12 +136,12 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
 	}
          */
 
-        // PRINT ALL ERRORS WHICH WILL HELP TO IDENTIFY THE PROBLEM
+        // PRINT ALL ERRORS FROM SESSION WHICH WILL HELP TO IDENTIFY THE PROBLEM
         if ($_SESSION['messages']['error']) {
             $error_messages = $_SESSION['messages']['error'];
             foreach ($error_messages as $error) {
                 $error = str_replace(dirname($drupal_path),'',$error); // delete Drupal full path for security reason
-                print_r($error,true); // show errors
+                $output .= print_r($error,true); // show session errors
             }
         }
         $output .= t("Done.").$nl;
@@ -174,7 +191,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                  */
                 break;
             }
-            $page_output = theme('page', $return); // return page not found, there can be some status error messages
+            //$page_output = theme('page', $return); // return page not found, there can be some status error messages
             if (empty($page_output)) {
                 $err = t('ERROR: Page is empty!').$nl;
                 if ($emergency) {
