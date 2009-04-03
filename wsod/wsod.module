@@ -27,24 +27,42 @@ function wsod_form_alter($form, $form_state, $form_id) {
  * @return string
  * 
  */
-function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
+function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE) {
     static $drupal_path;
-    // CHECK FOR FATAL ERRORS (which Drupal can't handle)
+    // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $verbose ? print $output : print 'n/a' ;
-        return; // can't continue, if there is some fatal error
+        return; // can't continue, if there are some fatal errors
     }
 
-    // check if we are on html page
-    $header = wsod_get_header_content_type();
-    if (strpos($header, 'text/html') === FALSE) {
-        return; // exit if we are on not html page
+    // ignore wsod checking on batch processing and maintenance work
+    if (defined('MAINTENANCE_MODE') || isset($_SESSION['batch_form_state'])) {
+        return;
+    }
+
+    // ignore wsod checking on POST forms, it breaking the forms (#416616) (TODO: later it could be supported - )
+    if (!empty($_POST['form_build_id'])) {
+        return;
+    }
+
+    // ignore if we are on non-html page
+    $headers = drupal_get_headers(); // FIXME: any other way to get headers?
+    $ignore_formats = array('xml', 'javascript', 'json', 'plain', 'image', 'application', 'csv', 'x-comma-separated-values');
+        foreach ($ignore_formats as $format) {
+        if (strstr($headers, $format)) {
+            return;
+        }
+    }
+
+    // ignore some specified callbacks (like Rebuilding permissions)
+    $router_item = menu_get_item();
+    if ($router_item['page_callback'] == 'system_batch_page') {
+        return;
     }
 
     // init variables
     $output = '';
     $nl = t('<br>');
-    $txt_enable_fix_on_fly = t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
 
     /* set base Drupal path as current especially during shutdown */
     if (!wsod_drupal_path()) { // change it if it's wrong
@@ -55,11 +73,18 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
     module_load_include('inc', 'wsod', 'wsod'); // include functions
 
     // check input variables
-    $path = !empty($_GET['path']) ? $_GET['path'] : $_GET['q'];
+    $path = $_GET['q'];
     isset($_GET['fix']) ? $fix_on_fly = TRUE : NULL; // if fix is defined, then switch to fixing mode
 
     /* check menu handler */
-    $return = menu_execute_active_handler($path);
+    ob_start();
+    $return = menu_execute_active_handler(); // use q argument to change default path
+    $content_output = ob_get_clean(); // TODO: what if there is some content?
+    // CHECK FOR FATAL ERRORS again
+    if (wsod_fatal_error_checker($output, $fix_on_fly)) {
+        $verbose ? print $output : print 'n/a' ;
+        return; // can't continue, if there is some fatal error
+    }
 
     if (is_null($return)) { /* check menu handler */
         $output .= t("%function: returned %handler - it's very bad!", array('%function' => 'menu_execute_active_handler()', '%handler' => 'NULL')).$nl;
@@ -68,13 +93,18 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
         /* check theme hooks */
         $res = wsod_validate_theme_hooks($verbose, $output);
         if (!$res) {
-            $fix_on_fly ? wsod_clear_caches() : NULL; // clear all caches
-            $output .= t("Re-testing...").$nl;
-            $res = wsod_validate_theme_hooks($verbose, $output);
-            if (!$res) {
-                $output .= t("There is still problem related to theme hooks").$nl; // FIXME
+            if ($fix_on_fly) {
+                wsod_clear_caches(); // clear all caches
+                module_rebuild_cache(); // rebuild paths in system table
+                $output .= t("Re-testing...").$nl;
+                $res = wsod_validate_theme_hooks($verbose, $output);
+                if (!$res) {
+                    $output .= t("There is still problem related to theme hooks").$nl; // FIXME
+                } else {
+                    $output .= t("Fixed?!").$nl;
+                }
             } else {
-                $output .= t("Fixed?!").$nl;
+                $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
             }
         } else {
             $output .= t("Validation theme hooks completed.").$nl;
@@ -84,7 +114,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
         if (!function_exists($router_item['page_callback'])) { // check if page callback exist
             $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
         } else {
-            $content = wsod_check_page_callback($router_item, $verbose, $output); // get content of page callback
+            wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
             if (empty($content)) { // check if page callback returned some content
                 $output .= t("ERROR: Callback: %callback() returned empty content!",array('%callback' => $router_item['page_callback'])).$nl;
                 $output .= t("NOTICE: router_item = %item!",array('%item' => print_r($router_item,true))).$nl;
@@ -93,6 +123,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
                     $output .= wsod_clear_caches(); // clear all caches
                     module_rebuild_cache();
                     $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
+                } else {
+                    $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
                 }
             }
         }
@@ -104,40 +136,71 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE) {
 	}
          */
 
-
-        // PRINT ALL ERRORS WHICH WILL HELP TO IDENTIFY THE PROBLEM
+        // PRINT ALL ERRORS FROM SESSION WHICH WILL HELP TO IDENTIFY THE PROBLEM
         if ($_SESSION['messages']['error']) {
             $error_messages = $_SESSION['messages']['error'];
             foreach ($error_messages as $error) {
                 $error = str_replace(dirname($drupal_path),'',$error); // delete Drupal full path for security reason
-                print_r($error,true); // show errors
+                $output .= print_r($error,true); // show session errors
             }
         }
         $output .= t("Done.").$nl;
     } else {
+      /* Standard Drupal behavior section. */
       switch ($return) {
 	case MENU_NOT_FOUND:
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl;
+            $page_output = drupal_not_found(); // return page not found, there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl);
+                }
+            }
 	    break;
 	case MENU_ACCESS_DENIED:
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl;
+            $page_output = drupal_access_denied(); // return permission denied page , there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl);
+                }
+            }
 	    break;
 	case MENU_SITE_OFFLINE:
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl;
+            $page_output = drupal_site_offline(); // return site offline page, there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl);
+                }
+            }
 	    break;
         default: // other cases
-            /* Normal behavior. Print nothing */
-	    //$output .= t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'PAGE_NOT_FOUND')).$nl;
-            /* TODO: Sometimes can't render page on shutdown, because of some errors recently
-                Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
-            $page = theme('page', $return);
-            if (empty($page)) {
-                $err = t('ERROR: Page is empty!').$nl;
+            if (module_exists('content_profile')) {
+                /* TODO: Sometimes can't render page on shutdown, because of some errors recently
+                    Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
+                 */
+                break;
             }
-             */
+            //$page_output = theme('page', $return); // return page not found, there can be some status error messages
+            if (empty($page_output)) {
+                $err = t('ERROR: Page is empty!').$nl;
+                if ($emergency) {
+                    /* TODO: don't print it twice */
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => "$return")).$nl);
+                }
+            } else {
+                $output .= $page_output; // if nothing to show, output standard page not found
+            }
       }
     }
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
@@ -182,9 +245,9 @@ function wsod_fatal_error_checker(&$output = NULL, $fix_on_fly = TRUE) {
         if ($isError){
             var_dump($error);
             wsod_fatal_error_fix($error['message'], $output, $fix_on_fly); // check if we can fix handled error
-            $output .= "Script execution halted with error: {$error['message']}<br>";
+            $output .= "ERROR: Script execution halted with error: {$error['message']}<br>";
         } else {
-            $output .= "Script execution completed with error: {$error['message']}<br>";
+            $output .= "NOTICE: Script execution completed with error: {$error['message']}<br>";
         }
     }
     return $isError;
@@ -211,6 +274,26 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
             module_rebuild_cache();
              */
         }
+    } else if (strpos($error,"Call to undefined function") !== FALSE) {
+        if ($fix_on_fly) { // if fix mode, then fix the errors
+            /* TODO:
+                Solution 1:
+                    We can load all module files and check where it's defined.
+                    After that we can compare and check if the module weight is correct.
+                    Needed module can be detected from $error via function name.
+                    Dependend module can be detected via filename $error['file']
+                    Fix: we can increase weight of the module depends of the other module.
+                    Example code:
+                        $weight = (int) db_result(db_query("SELECT weight FROM {system} WHERE name = 'module1'"));
+                        db_query("UPDATE {system} SET weight = %d WHERE name = 'module2'", $weight + 1);
+                Solution 2:
+                    If module with specified function wasn't found, maybe there is wrong dependency.
+                    Propose to user to install missing module (get module name from $error).
+             */
+        }
+    }
+    if (!$fix_on_fly) {
+        $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
     }
 }
 

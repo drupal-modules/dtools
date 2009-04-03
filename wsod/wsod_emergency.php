@@ -21,6 +21,7 @@ if (!empty($drupal_path)) {
 
 /* simulate Drupal boot */
 require_once './includes/bootstrap.inc'; // load bootstrap file
+require_once './includes/menu.inc'; // load menu file (needed for Menu flags)
 wsod_drupal_bootstrap_run(DRUPAL_BOOTSTRAP_FULL); // execute WSOD version of Drupal bootstrap
 
 /* enable wsod module */
@@ -32,5 +33,5 @@ if (!function_exists('wsod_check_wsod')) { // if wsod testing function doesn't e
     drupal_load('module', 'wsod'); // load module files again
 } // if this will not help, please check manually in your filesystem if you don't have duplicated wsod modules
 
-print wsod_check_wsod($verbose, $fix_on_fly); // run diagnostic
+print wsod_check_wsod($verbose, $fix_on_fly, TRUE); // run diagnostic
 

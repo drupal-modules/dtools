@@ -43,20 +43,22 @@ function wsod_validate_theme_hooks($verbose = FALSE, &$output = NULL) {
  * @param string $router_item
  * @return array or false 
  */ 
-function wsod_check_page_callback($router_item, $verbose = FALSE, &$output = NULL) {
+function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages = NULL, &$content_output = NULL) {
     $res = FALSE;
+    ob_start(); // start output buffering
     $nl = t('<br>');
     if ($router_item) {
         if ($router_item['access']) {
             if ($router_item['file']) {
                 require_once($router_item['file']);
                 $file = basename($router_item['file']);
-                $output .= t("Included render file: %file",array('%file' => $file)).$nl; // PRINT included file
+                $messages .= t("Included render file: %file",array('%file' => $file)).$nl; // PRINT included file
             }
-            $output .= t("Checking %function() page callback...",array('%function' => $router_item['page_callback'])).$nl; // PRINT included file
+            $messages .= t("Checking %function() page callback...",array('%function' => $router_item['page_callback'])).$nl; // PRINT included file
             $res = call_user_func_array($router_item['page_callback'], $router_item['page_arguments']);
         }
     }
+    $content_output = ob_get_clean(); // get output
     return $res;
 }
 

@@ -9,8 +9,8 @@ How to install:
 
 Emergency run:
 1. Copy module to your Drupal module directory. (sites\all\modules\ ?)
-2. Open in example: http://example.com/sites/all/modules/dtools/wsod/wsod_emergency.php (this is only the example, please update your path)
-   To detect specified path for WSOD, use path argument.
+2. Open in example: http://example.com/sites/all/modules/dtools/wsod/wsod_emergency.php (this is only the example, please update your path argument)
+   To detect specified path for WSOD, use 'q' argument.
 3. Module will run Drupal core, install the WSOD module and will detect WSOD automatically.
 
 How to uninstall:
@@ -22,7 +22,7 @@ How it's working?
 
 TIPS:
 - To check your WSOD for specified path in emergency mode:
-  just try to add ?path argument into your URL (Example: wsod_emergency.php?path=forum)
+  just try to add ?q argument into your URL (Example: wsod_emergency.php?q=forum)
 
 FAQ:
 1.  I've got Fatal error: Call to undefined function wsod_check_wsod()?
@@ -34,7 +34,7 @@ FAQ:
 2. My .../wsod_emergency.php page is empty.
    That's mean there is no any WSOD (White Screen of Death detected) on default page.
    - go again to your default page (like http://www.example.com/) and make sure that WSOD is still there
-   - if your WSOD is on specified path, try to add ?path argument into your URL (Example: wsod_emergency.php?path=forum)
+   - if your WSOD is on specified path, try to add ?q argument into your URL (Example: wsod_emergency.php?q=forum)
    If you sure that there is still WSOD, so the problem can be not related to Drupal:
    - check your php.log for fatal errors
    - test if your web server is running correctly (Example: http://example.com/UPGRADE.txt)
