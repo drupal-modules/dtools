@@ -10,7 +10,7 @@
  * @param string $router_item
  * @return array or false 
  */ 
-function wsod_validate_theme_hooks($verbose = FALSE, &$output = NULL) {
+function wsod_validate_theme_hooks($verbose = FALSE, &$output) {
     $hooks = theme_get_registry(); // get list of theme hook
     $theme_test = true;
     $nl = t('<br>');
@@ -43,7 +43,7 @@ function wsod_validate_theme_hooks($verbose = FALSE, &$output = NULL) {
  * @param string $router_item
  * @return array or false 
  */ 
-function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages = NULL, &$content_output = NULL) {
+function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages, &$content_output) {
     $res = FALSE;
     ob_start(); // start output buffering
     $nl = t('<br>');
@@ -61,5 +61,4 @@ function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages = N
     $content_output = ob_get_clean(); // get output
     return $res;
 }
-
 

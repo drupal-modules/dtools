@@ -226,10 +226,10 @@ function wsod_clear_caches() {
 /**
  * Check for fatal errors
  */
-function wsod_fatal_error_checker(&$output = NULL, $fix_on_fly = TRUE) {
+function wsod_fatal_error_checker(&$output, $fix_on_fly = TRUE) {
     // CHECK FOR FATAL ERRORS (which Drupal can't handle)
     $isError = FALSE;
-    if ($error = error_get_last()){
+    if ((version_compare(PHP_VERSION, '5.2.0') === 1) && $error = error_get_last()) {
         switch($error['type']){
             case E_ERROR:
             case E_CORE_ERROR:
@@ -333,7 +333,7 @@ function wsod_check_forms() {
  * Detect Drupal path by scanning each level of current path
  * 
  */ 
-function wsod_detect_drupal_path(&$output = NULL, $start_dir = __FILE__) {
+function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
     $drupal_path = FALSE; // set init variable
     $path_arr = wsod_pathposall(dirname($start_dir));
     $bootstrap_file = '/includes/bootstrap.inc';
