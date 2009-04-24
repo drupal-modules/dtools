@@ -191,7 +191,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                  */
                 break;
             }
-            //$page_output = theme('page', $return); // return page not found, there can be some status error messages
+            $page_output = theme('page', $return); // return page not found, there can be some status error messages
             if (empty($page_output)) {
                 $err = t('ERROR: Page is empty!').$nl;
                 if ($emergency) {
