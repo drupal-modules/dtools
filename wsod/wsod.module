@@ -438,7 +438,7 @@ function wsod_get_header_content_type($header = 'text/html') {
  * 
  */
 function wsod_sess_close() {
-    wsod_check_wsod();
+    wsod_check_wsod(TRUE);
     return TRUE;
 }
 
