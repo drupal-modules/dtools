@@ -84,6 +84,12 @@ function bench_chart_menu() {
  * Callback of register_shutdown_function()
  */
 function bench_chart_shutdown() {
+    /* fix Drupal path during shutdown */
+    if (!file_exists('./includes/bootstrap.inc')) {
+        $drupal_path = bench_chart_detect_drupal_path(drupal_get_path('module', 'node'));
+        !empty($drupal_path) ? chdir($drupal_path) : NULL; // change dir to Drupal path
+    }
+
     bench_chart_my_hook(array('(exit)', 'end'));
     bench_chart_save_to_db();
     timer_stop('bench_chart');
@@ -92,7 +98,7 @@ function bench_chart_shutdown() {
 function bench_chart_save_to_db() {
     global $hooks_run;
 
-    $menu = function_exists('menu_get_item') ? menu_get_item() : NULL; // get alias to the current menu (if menu is already loaded)
+    $menu = (function_exists('menu_get_item') && !defined('MAINTENANCE_MODE')) ? menu_get_item() : NULL; // get alias to the current menu (if menu is already loaded)
     $path = !empty($menu['path']) ? $menu['path'] : $_GET['q']; // set alias, if doesn't exist, get path directly
     $totaltime = (float)0;
     foreach ($hooks_run as $hook_name => $hook) { // for each executed hook
@@ -188,4 +194,78 @@ function bench_chart_run_hook() {
     }
 }
 
+/** 
+ * Detect Drupal path by scanning each level of current path
+ * 
+ */ 
+function bench_chart_detect_drupal_path($start_dir = __FILE__, &$output = NULL) {
+    $drupal_path = FALSE; // set init variable
+    $path_arr = bench_chart_pathposall(dirname($start_dir));
+    $bootstrap_file = '/includes/bootstrap.inc';
+    foreach ($path_arr as $path) {
+        if (file_exists($path.$bootstrap_file)) {
+            $drupal_path = $path;
+        } else {
+            $output .= "Couldn't find $path$bootstrap_file!<br>\n";
+        }
+    }
+    return $drupal_path;
+}
+
+/** 
+ * pathposall 
+ * 
+ * Find all occurrences of a subdirs in a path
+ * 
+ * @param string $dir
+ * @return array
+ */ 
+function bench_chart_pathposall($dir){ 
+    $slash = bench_chart_detect_filesystem_slash();
+    $pos = bench_chart_strposall($dir,$slash);
+    foreach ($pos as $no) {
+        $subdir[] = substr($dir, 0, $no);
+    }
+    if (is_array($subdir)) {
+        rsort($subdir); // make list in reverse
+        return $subdir; // return array of available subdir paths
+    } else {
+        return array();
+    }
+} 
+
+/** 
+ * Find all occurrences of a needle in a haystack 
+ * 
+ * @param string $haystack 
+ * @param string $needle 
+ * @return array or false 
+ */ 
+function bench_chart_strposall($haystack,$needle){ 
+    $s=0; $i=0; 
+    while (is_integer($i)){ 
+        $i = strpos($haystack,$needle,$s); 
+        if (is_integer($i)) { 
+            $aStrPos[] = $i; 
+            $s = $i+strlen($needle); 
+        } 
+    } 
+    if (isset($aStrPos)) { 
+        return $aStrPos; 
+    } else { 
+        return false; 
+    } 
+} 
+
+/** 
+ * Detect slash type of filesystem
+ * 
+ */ 
+function bench_chart_detect_filesystem_slash() {
+    if (strpos(__FILE__, '/') !== FALSE) { // detect filesystem
+        return '/'; // Unix style
+    } else {
+        return '\\'; // Windows style
+    }
+}
 
