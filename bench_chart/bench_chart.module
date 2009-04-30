@@ -86,7 +86,8 @@ function bench_chart_menu() {
 function bench_chart_shutdown() {
     /* fix Drupal path during shutdown */
     if (!file_exists('./includes/bootstrap.inc')) {
-        $drupal_path = bench_chart_detect_drupal_path(drupal_get_path('module', 'node'));
+        $output = '';
+        $drupal_path = bench_chart_detect_drupal_path($output);
         !empty($drupal_path) ? chdir($drupal_path) : NULL; // change dir to Drupal path
     }
 
@@ -198,7 +199,7 @@ function bench_chart_run_hook() {
  * Detect Drupal path by scanning each level of current path
  * 
  */ 
-function bench_chart_detect_drupal_path($start_dir = __FILE__, &$output = NULL) {
+function bench_chart_detect_drupal_path(&$output, $start_dir = __FILE__) {
     $drupal_path = FALSE; // set init variable
     $path_arr = bench_chart_pathposall(dirname($start_dir));
     $bootstrap_file = '/includes/bootstrap.inc';

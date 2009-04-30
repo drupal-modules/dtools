@@ -45,6 +45,24 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         return;
     }
 
+    $output = ''; // init output
+
+    /* set base Drupal path as current especially during shutdown */
+    if (!wsod_drupal_path()) { // Note: Working directory of the script can change inside the shutdown function under some web servers, e.g. Apache.
+        $drupal_path = wsod_detect_drupal_path($output); // FIXME: Any other function which returns current Drupal path?
+        !empty($drupal_path) ? chdir($drupal_path) : NULL; // change dir to Drupal path
+    }
+
+    if (!function_exists('menu_get_item')) {
+         /*
+             FIXME:
+             In some version of PHP4 with specified HTTP Requests Drupal includes could be not loaded in this stage
+             causing several errors with 'Call to undefined function'.
+             There are too many dependencies, so if this will happen, it's better to stop at this stage
+          */
+        return;
+    }
+
     // ignore if we are on non-html page
     $headers = drupal_get_headers(); // FIXME: any other way to get headers?
     $ignore_formats = array('xml', 'javascript', 'json', 'plain', 'image', 'application', 'csv', 'x-comma-separated-values');
@@ -61,14 +79,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     // init variables
-    $output = '';
     $nl = t('<br>');
-
-    /* set base Drupal path as current especially during shutdown */
-    if (!wsod_drupal_path()) { // change it if it's wrong
-        $drupal_path = wsod_detect_drupal_path(drupal_get_path('module', 'node')); // FIXME: Any other function which returns current Drupal path?
-        !empty($drupal_path) ? chdir($drupal_path) : NULL; // change dir to Drupal path
-    }
 
     module_load_include('inc', 'wsod', 'wsod'); // include functions
 
@@ -330,24 +341,6 @@ function wsod_check_forms() {
 
 
 /** 
- * Detect Drupal path by scanning each level of current path
- * 
- */ 
-function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
-    $drupal_path = FALSE; // set init variable
-    $path_arr = wsod_pathposall(dirname($start_dir));
-    $bootstrap_file = '/includes/bootstrap.inc';
-    foreach ($path_arr as $path) {
-        if (file_exists($path.$bootstrap_file)) {
-            $drupal_path = $path;
-        } else {
-            $output .= "Couldn't find $path$bootstrap_file!<br>\n";
-        }
-    }
-    return $drupal_path;
-}
-
-/** 
  * pathposall 
  * 
  * Find all occurrences of a subdirs in a path
@@ -429,6 +422,24 @@ function wsod_get_header_content_type($header = 'text/html') {
         }
     }
     return $header;
+}
+
+/** 
+ * Detect Drupal path by scanning each level of current path
+ * 
+ */ 
+function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
+    $drupal_path = FALSE; // set init variable
+    $path_arr = wsod_pathposall(dirname($start_dir));
+    $bootstrap_file = '/includes/bootstrap.inc';
+    foreach ($path_arr as $path) {
+        if (file_exists($path.$bootstrap_file)) {
+            $drupal_path = $path;
+        } else {
+            $output .= "Couldn't find $path$bootstrap_file!<br>\n";
+        }
+    }
+    return $drupal_path;
 }
 
 /**
