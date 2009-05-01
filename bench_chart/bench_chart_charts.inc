@@ -122,11 +122,20 @@ function _charts_system_generate($title, $sql, $type, $callback = NULL) {
     if (!empty($callback)) {
       $result['name'] = $callback($result['name']);
     }
-
-    $data[] = array(
-      '#value'  => $result['count'],
-      '#label'  => $result['name'] .': '. $result['count']
-    );
+    switch ($type) {
+        case 'line2D':
+            $data[] = array(
+              '#value'  => $result['count'],
+              '#label'  => $result['name']
+            );
+            break;
+        default:
+            $data[] = array(
+              '#value'  => $result['count'],
+              '#label'  => $result['name'] .': '. $result['count']
+            );
+        break;
+    }
   }
 
   if (!empty($data)) {
@@ -135,8 +144,8 @@ function _charts_system_generate($title, $sql, $type, $callback = NULL) {
     $chart['#title']    = $title;
     if ($type) {
 	$chart['#type']     = $type;
-	$chart['#width']     = empty($settings['#width']) ? 400 : $settings['#width'];
-	$chart['#height']     = empty($settings['#height']) ? 300 : $settings['#height'];
+	$chart['#width']     = empty($settings['#width']) ? 600 : $settings['#width'];
+	$chart['#height']     = empty($settings['#height']) ? 200 : $settings['#height'];
     }
 
     return charts_chart($chart);
