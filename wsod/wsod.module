@@ -432,14 +432,17 @@ function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
     $drupal_path = FALSE; // set init variable
     $path_arr = wsod_pathposall(dirname($start_dir));
     $bootstrap_file = '/includes/bootstrap.inc';
+    $buff_output = '';
     foreach ($path_arr as $path) {
         if (file_exists($path.$bootstrap_file)) {
             $drupal_path = $path;
+            return $drupal_path;
         } else {
-            $output .= "Couldn't find $path$bootstrap_file!<br>\n";
+            $buff_output .= "Couldn't find $path$bootstrap_file!<br>\n";
         }
     }
-    return $drupal_path;
+    $output .= $buff_output;
+    return NULL;
 }
 
 /**
