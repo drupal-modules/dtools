@@ -160,7 +160,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       /* Standard Drupal behavior section. */
       switch ($return) {
 	case MENU_NOT_FOUND:
-            $page_output = drupal_not_found(); // return page not found, there can be some status error messages
+            ob_start(); // start buffering
+            drupal_not_found(); // return page not found, there can be some status error messages
+            $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
                 $err = t('ERROR: Page is empty!').$nl;
             } else {
@@ -172,7 +174,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             }
 	    break;
 	case MENU_ACCESS_DENIED:
-            $page_output = drupal_access_denied(); // return permission denied page , there can be some status error messages
+            ob_start(); // start buffering
+            drupal_access_denied(); // return permission denied page , there can be some status error messages
+            $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
                 $err = t('ERROR: Page is empty!').$nl;
             } else {
@@ -184,7 +188,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             }
 	    break;
 	case MENU_SITE_OFFLINE:
-            $page_output = drupal_site_offline(); // return site offline page, there can be some status error messages
+            ob_start(); // start buffering
+            drupal_site_offline(); // return site offline page, there can be some status error messages
+            $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
                 $err = t('ERROR: Page is empty!').$nl;
             } else {
@@ -215,6 +221,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       }
     }
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
+    $output = ltrim($output); // remove spaces from output
     if (!empty($output)) {
         watchdog('wsod', $output); // log the error
     }
