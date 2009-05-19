@@ -1,14 +1,16 @@
 <?php
 /*
-	version: $Id$
-	author: kenorb@gmail.com
+  version: $Id$
+  author: kenorb@gmail.com
 */
 
 /**
  * Implementation of hook_boot(). Runs even for cached pages.
  */
 function wsod_boot() {
-    register_shutdown_function('wsod_check_wsod');
+  global $drupal_path;
+  $drupal_path = getcwd();
+  register_shutdown_function('wsod_check_wsod');
 } 
 
 /**
@@ -28,7 +30,7 @@ function wsod_form_alter($form, $form_state, $form_id) {
  * 
  */
 function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE) {
-    static $drupal_path;
+    global $drupal_path;
     // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $verbose ? print $output : print 'n/a' ;
@@ -39,7 +41,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (defined('MAINTENANCE_MODE') || isset($_SESSION['batch_form_state'])) {
         return;
     }
-
+   
     // ignore wsod checking on POST forms, it breaking the forms (#416616) (TODO: later it could be supported - )
     if (!empty($_POST['form_build_id'])) {
         return;
@@ -48,9 +50,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     $output = ''; // init output
 
     /* set base Drupal path as current especially during shutdown */
-    if (!wsod_drupal_path()) { // Note: Working directory of the script can change inside the shutdown function under some web servers, e.g. Apache.
-        $drupal_path = wsod_detect_drupal_path($output); // FIXME: Any other function which returns current Drupal path?
-        !empty($drupal_path) ? chdir($drupal_path) : NULL; // change dir to Drupal path
+    $curr_path = getcwd();
+    if ($curr_path <> $drupal_path) { // Note: Working directory of the script can change inside the shutdown function under some web servers, e.g. Apache.
+        chdir($drupal_path);
     }
 
     if (!function_exists('menu_get_item')) {
@@ -142,10 +144,10 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         /* check forms */
         /* TODO
         $invalid_forms = wsod_check_forms();
-	if (!empty($invalid_forms)) {
-	    $output .= "empty forms = ".print_r($invalid_forms,true)."<br>";
-	}
-         */
+        if (!empty($invalid_forms)) {
+          $output .= "empty forms = ".print_r($invalid_forms,true)."<br>";
+        }
+        */
 
         // PRINT ALL ERRORS FROM SESSION WHICH WILL HELP TO IDENTIFY THE PROBLEM
         if ($_SESSION['messages']['error']) {
@@ -159,7 +161,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     } else {
       /* Standard Drupal behavior section. */
       switch ($return) {
-	case MENU_NOT_FOUND:
+  case MENU_NOT_FOUND:
             ob_start(); // start buffering
             drupal_not_found(); // return page not found, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
@@ -172,8 +174,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl);
                 }
             }
-	    break;
-	case MENU_ACCESS_DENIED:
+      break;
+  case MENU_ACCESS_DENIED:
             ob_start(); // start buffering
             drupal_access_denied(); // return permission denied page , there can be some status error messages
             $page_output = ob_get_clean(); // get page output
@@ -186,8 +188,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl);
                 }
             }
-	    break;
-	case MENU_SITE_OFFLINE:
+      break;
+  case MENU_SITE_OFFLINE:
             ob_start(); // start buffering
             drupal_site_offline(); // return site offline page, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
@@ -200,7 +202,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl);
                 }
             }
-	    break;
+      break;
         default: // other cases
             if (module_exists('content_profile')) {
                 /* TODO: Sometimes can't render page on shutdown, because of some errors recently
@@ -316,102 +318,34 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
 }
 
 function wsod_check_forms() {
-    global $active_forms;
-    $active_forms=array_unique($active_forms); // remove duplicates
-    $empty_forms = array();
-    $form_state = array ('storage' => NULL, 'submitted' => FALSE, 'post' => array ());
-    $node = array ('storage' => NULL, 'submitted' => FALSE, 'post' => array ());
-    $max_count = count($active_forms); // get count of array
-    foreach ($active_forms as $key => $form_id) {
-	$id = $form_id;
-	//$form = drupal_get_form($id); //$form = drupal_retrieve_form($form_id, $form_state);
+  global $active_forms;
+  $active_forms=array_unique($active_forms); // remove duplicates
+  $empty_forms = array();
+  $form_state = array ('storage' => NULL, 'submitted' => FALSE, 'post' => array ());
+  $node = array ('storage' => NULL, 'submitted' => FALSE, 'post' => array ());
+  $max_count = count($active_forms); // get count of array
+  foreach ($active_forms as $key => $form_id) {
+    $id = $form_id;
+    //$form = drupal_get_form($id); //$form = drupal_retrieve_form($form_id, $form_state);
 
-	$form = drupal_retrieve_form($form_id, $form_state);
-	module_invoke_all('form_alter', $form);
-	if (empty($form)) {
-	    $empty_forms[] = $form_id;
-	}
-
-	//$form_content = drupal_render_form($form_id, $form);
-	$form_content = drupal_get_form($form_id);
-	if (empty($form_content)) {
-	    $empty_forms[] = $form_content;
-	}
-
-	if ($key > $max_count+1) {
-	    print "Recurrency detected in form_alter hook!<br>";
-	    break;
-	}
+    $form = drupal_retrieve_form($form_id, $form_state);
+    module_invoke_all('form_alter', $form);
+    if (empty($form)) {
+        $empty_forms[] = $form_id;
     }
-    return array_unique($empty_forms);
-}
 
-
-/** 
- * pathposall 
- * 
- * Find all occurrences of a subdirs in a path
- * 
- * @param string $dir
- * @return array
- */ 
-function wsod_pathposall($dir){ 
-    $slash = wsod_detect_filesystem_slash();
-    $pos = wsod_strposall($dir,$slash);
-    foreach ($pos as $no) {
-        $subdir[] = substr($dir, 0, $no);
+    //$form_content = drupal_render_form($form_id, $form);
+    $form_content = drupal_get_form($form_id);
+    if (empty($form_content)) {
+      $empty_forms[] = $form_content;
     }
-    if (is_array($subdir)) {
-        rsort($subdir); // make list in reverse
-        return $subdir; // return array of available subdir paths
-    } else {
-        return array();
+
+    if ($key > $max_count+1) {
+      print "Recurrency detected in form_alter hook!<br>";
+      break;
     }
-} 
-
-/** 
- * Find all occurrences of a needle in a haystack 
- * 
- * @param string $haystack 
- * @param string $needle 
- * @return array or false 
- */ 
-function wsod_strposall($haystack,$needle){ 
-    $s=0; $i=0; 
-    while (is_integer($i)){ 
-        $i = strpos($haystack,$needle,$s); 
-        if (is_integer($i)) { 
-            $aStrPos[] = $i; 
-            $s = $i+strlen($needle); 
-        } 
-    } 
-    if (isset($aStrPos)) { 
-        return $aStrPos; 
-    } else { 
-        return false; 
-    } 
-} 
-
-/** 
- * Detect slash type of filesystem
- * 
- */ 
-function wsod_detect_filesystem_slash() {
-    if (strpos(__FILE__, '/') !== FALSE) { // detect filesystem
-        return '/'; // Unix style
-    } else {
-        return '\\'; // Windows style
-    }
-}
-
-/**
- * Check if Drupal is in current path
- * 
- */
-function wsod_drupal_path() {
-    $path = getcwd();
-    $bootstrap_file = '/includes/bootstrap.inc';
-    return file_exists($path.$bootstrap_file);
+  }
+  return array_unique($empty_forms);
 }
 
 /**
@@ -421,35 +355,14 @@ function wsod_drupal_path() {
  * 
  */
 function wsod_get_header_content_type($header = 'text/html') {
-    $headers = explode("\n", drupal_get_headers());
-    $ct_key = 'Content-Type: ';
-    foreach ($headers as $header_line) {
-        if (($pos = strpos($ct_key, $header_line)) === FALSE) {
-            $header = substr($header_line, $pos+strlen($ct_key));
-        }
+  $headers = explode("\n", drupal_get_headers());
+  $ct_key = 'Content-Type: ';
+  foreach ($headers as $header_line) {
+    if (($pos = strpos($ct_key, $header_line)) === FALSE) {
+      $header = substr($header_line, $pos+strlen($ct_key));
     }
-    return $header;
-}
-
-/** 
- * Detect Drupal path by scanning each level of current path
- * 
- */ 
-function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
-    $drupal_path = FALSE; // set init variable
-    $path_arr = wsod_pathposall(dirname($start_dir));
-    $bootstrap_file = '/includes/bootstrap.inc';
-    $buff_output = '';
-    foreach ($path_arr as $path) {
-        if (file_exists($path.$bootstrap_file)) {
-            $drupal_path = $path;
-            return $drupal_path;
-        } else {
-            $buff_output .= "Couldn't find $path$bootstrap_file!<br>\n";
-        }
-    }
-    $output .= $buff_output;
-    return NULL;
+  }
+  return $header;
 }
 
 /**
@@ -459,8 +372,8 @@ function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
  * 
  */
 function wsod_sess_close() {
-    wsod_check_wsod(TRUE);
-    return TRUE;
+  wsod_check_wsod(TRUE);
+  return TRUE;
 }
 
 /**

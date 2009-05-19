@@ -35,3 +35,80 @@ if (!function_exists('wsod_check_wsod')) { // if wsod testing function doesn't e
 
 print wsod_check_wsod($verbose, $fix_on_fly, TRUE); // run diagnostic
 
+/** 
+ * Detect Drupal path by scanning each level of current path
+ * 
+ */ 
+function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
+    $drupal_path = FALSE; // set init variable
+    $path_arr = wsod_pathposall(dirname($start_dir));
+    $bootstrap_file = '/includes/bootstrap.inc';
+    $buff_output = '';
+    foreach ($path_arr as $path) {
+        if (file_exists($path.$bootstrap_file)) {
+            $drupal_path = $path;
+            return $drupal_path;
+        } else {
+            $buff_output .= "Couldn't find $path$bootstrap_file!<br>\n";
+        }
+    }
+    $output .= $buff_output;
+    return NULL;
+}
+
+/** 
+ * pathposall 
+ * 
+ * Find all occurrences of a subdirs in a path
+ * 
+ * @param string $dir
+ * @return array
+ */ 
+function wsod_pathposall($dir){ 
+    $slash = wsod_detect_filesystem_slash();
+    $pos = wsod_strposall($dir,$slash);
+    foreach ($pos as $no) {
+        $subdir[] = substr($dir, 0, $no);
+    }
+    if (is_array($subdir)) {
+        rsort($subdir); // make list in reverse
+        return $subdir; // return array of available subdir paths
+    } else {
+        return array();
+    }
+} 
+
+/** 
+ * Detect slash type of filesystem
+ * 
+ */ 
+function wsod_detect_filesystem_slash() {
+    if (strpos(__FILE__, '/') !== FALSE) { // detect filesystem
+        return '/'; // Unix style
+    } else {
+        return '\\'; // Windows style
+    }
+}
+
+/** 
+ * Find all occurrences of a needle in a haystack 
+ * 
+ * @param string $haystack 
+ * @param string $needle 
+ * @return array or false 
+ */ 
+function wsod_strposall($haystack,$needle){ 
+    $s=0; $i=0; 
+    while (is_integer($i)){ 
+        $i = strpos($haystack,$needle,$s); 
+        if (is_integer($i)) { 
+            $aStrPos[] = $i; 
+            $s = $i+strlen($needle); 
+        } 
+    } 
+    if (isset($aStrPos)) { 
+        return $aStrPos; 
+    } else { 
+        return false; 
+    } 
+} 
