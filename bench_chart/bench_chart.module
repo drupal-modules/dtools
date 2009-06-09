@@ -44,9 +44,11 @@ function bench_chart_gen_hooks($fname = 'bench_chart', $type = 'end') { // gener
  * Implementation of hook_boot(). Runs even for cached pages.
  */
 function bench_chart_boot() {
-    bench_chart_my_hook(array('boot','start'));
-    register_shutdown_function('bench_chart_shutdown');
-    bench_chart_gen_hooks('bench_chart', 'start'); // generate function hooks
+  global $drupal_path;
+  $drupal_path = getcwd();
+  bench_chart_my_hook(array('boot','start'));
+  register_shutdown_function('bench_chart_shutdown');
+  bench_chart_gen_hooks('bench_chart', 'start'); // generate function hooks
 } 
 
 /**
@@ -86,8 +88,7 @@ function bench_chart_menu() {
 function bench_chart_shutdown() {
     /* fix Drupal path during shutdown */
     if (!file_exists('./includes/bootstrap.inc')) {
-        $output = '';
-        $drupal_path = bench_chart_detect_drupal_path($output);
+        global $drupal_path;
         !empty($drupal_path) ? chdir($drupal_path) : NULL; // change dir to Drupal path
     }
 
@@ -151,22 +152,6 @@ function bench_chart_my_hook() {
 }
 
 
-/*
- * Get the last argument from the path
- *
- * @version 11/12/2008
- * @author kenorb@gmail.com
- */
-function bench_chart_get_last_path_arg() {
-    if (module_exists('path')) { // if path module exist, translate url from alias
-	$path = drupal_get_path_alias($_GET['q']);
-	$arg = explode('/',drupal_get_path_alias($path));
-    } else {
-	$arg = arg(); // otherwise use standard one
-    }
-    return $arg[count($arg)-1]; // get last argument of URI path 
-}
-
 /**
  * Implementation of each hook
  *
@@ -192,84 +177,6 @@ function bench_chart_run_hook() {
     }
     foreach($hook_timer as $module => $time) {
         db_query("REPLACE INTO {bench_chart} (hook, count, time, totaltime, path) VALUES ('%s', '%d', '%f', '%f', '%s')", "${module}_$hook", 0, $time, $hook_total_time[$module], $path);
-    }
-}
-
-/** 
- * Detect Drupal path by scanning each level of current path
- * 
- */ 
-function bench_chart_detect_drupal_path(&$output, $start_dir = __FILE__) {
-    $drupal_path = FALSE; // set init variable
-    $path_arr = bench_chart_pathposall(dirname($start_dir));
-    $bootstrap_file = '/includes/bootstrap.inc';
-    $buff_output = '';
-    foreach ($path_arr as $path) {
-        if (file_exists($path.$bootstrap_file)) {
-            $drupal_path = $path;
-            return $drupal_path;
-        } else {
-            $buff_output .= "Couldn't find $path$bootstrap_file!<br>\n";
-        }
-    }
-    $output .= $buff_output;
-    return NULL;
-}
-
-/** 
- * pathposall 
- * 
- * Find all occurrences of a subdirs in a path
- * 
- * @param string $dir
- * @return array
- */ 
-function bench_chart_pathposall($dir){ 
-    $slash = bench_chart_detect_filesystem_slash();
-    $pos = bench_chart_strposall($dir,$slash);
-    foreach ($pos as $no) {
-        $subdir[] = substr($dir, 0, $no);
-    }
-    if (is_array($subdir)) {
-        rsort($subdir); // make list in reverse
-        return $subdir; // return array of available subdir paths
-    } else {
-        return array();
-    }
-} 
-
-/** 
- * Find all occurrences of a needle in a haystack 
- * 
- * @param string $haystack 
- * @param string $needle 
- * @return array or false 
- */ 
-function bench_chart_strposall($haystack,$needle){ 
-    $s=0; $i=0; 
-    while (is_integer($i)){ 
-        $i = strpos($haystack,$needle,$s); 
-        if (is_integer($i)) { 
-            $aStrPos[] = $i; 
-            $s = $i+strlen($needle); 
-        } 
-    } 
-    if (isset($aStrPos)) { 
-        return $aStrPos; 
-    } else { 
-        return false; 
-    } 
-} 
-
-/** 
- * Detect slash type of filesystem
- * 
- */ 
-function bench_chart_detect_filesystem_slash() {
-    if (strpos(__FILE__, '/') !== FALSE) { // detect filesystem
-        return '/'; // Unix style
-    } else {
-        return '\\'; // Windows style
     }
 }
 

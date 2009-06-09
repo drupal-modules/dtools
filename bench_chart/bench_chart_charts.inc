@@ -6,7 +6,7 @@
 function bench_chart_charts() {
     $output = '';
 
-    $last_arg = bench_chart_get_last_path_arg(); // check for last argument (custom chart request)
+    $last_arg = end(arg()); // check for last argument (custom chart request)
     if (strlen($last_arg) == 32) {
         $path = db_result(db_query('SELECT path FROM {bench_chart} WHERE md5(path) = \'%s\' AND count > 0', $last_arg));
         $chart = _charts_system_generate(
