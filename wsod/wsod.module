@@ -1,8 +1,15 @@
 <?php
-/*
-  version: $Id$
-  author: kenorb@gmail.com
-*/
+
+/**
+ * @file
+ *   Form settings per user
+ *
+ * @version
+ *   $Id$
+ *
+ * @developer:
+ *    Rafal Wieczorek <kenorb@gmail.com>
+ */
 
 /**
  * Implementation of hook_boot(). Runs even for cached pages.
@@ -19,6 +26,12 @@ function wsod_boot() {
 function wsod_form_alter($form, $form_state, $form_id) {
     global $active_forms;
     $active_forms[] = $form_id;
+}
+
+/**
+ * Implementation of hook_exit().
+ */
+function wsod_exit() {
 }
 
 /**
@@ -161,7 +174,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     } else {
       /* Standard Drupal behavior section. */
       switch ($return) {
-  case MENU_NOT_FOUND:
+        case MENU_NOT_FOUND:
             ob_start(); // start buffering
             drupal_not_found(); // return page not found, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
@@ -174,8 +187,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl);
                 }
             }
-      break;
-  case MENU_ACCESS_DENIED:
+        break;
+        case MENU_ACCESS_DENIED:
             ob_start(); // start buffering
             drupal_access_denied(); // return permission denied page , there can be some status error messages
             $page_output = ob_get_clean(); // get page output
@@ -188,8 +201,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl);
                 }
             }
-      break;
-  case MENU_SITE_OFFLINE:
+        break;
+        case MENU_SITE_OFFLINE:
             ob_start(); // start buffering
             drupal_site_offline(); // return site offline page, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
@@ -202,7 +215,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl);
                 }
             }
-      break;
+        break;
         default: // other cases
             if (module_exists('content_profile')) {
                 /* TODO: Sometimes can't render page on shutdown, because of some errors recently

@@ -31,8 +31,8 @@ FAQ:
     - run in emergency mode to execute module_rebuild_cache() to refresh module paths
     - check for duplicated WSOD modules in your filesystem
 
-2. My .../wsod_emergency.php page is empty.
-   That's mean there is no any WSOD (White Screen of Death detected) on default page.
+2. My .../wsod_emergency.php contain dots or is empty.
+   That's fine, that mean there is no any WSOD (White Screen of Death detected) on default page.
    - go again to your default page (like http://www.example.com/) and make sure that WSOD is still there
    - if your WSOD is on specified path, try to add ?q argument into your URL (Example: wsod_emergency.php?q=forum)
    If you sure that there is still WSOD, so the problem can be not related to Drupal:
@@ -45,7 +45,7 @@ FAQ:
      - Install XDebug debugging library and debug it: http://xdebug.org/
      - Send me an e-mail, maybe I'll be able to help you (kenorb@gmail.com)
      
-4. My .../wsod_emergency.php returns unthemed 'Page not found'.
+3. My .../wsod_emergency.php returns unthemed 'Page not found'.
 
    That's mean there is no any WSOD (White Screen of Death detected) on this page,
    so the page was themed normally (but because of emergency run, path are different and CSS files couldn't be loaded)
@@ -61,3 +61,4 @@ FAQ:
 
 TODO:
 - Show last watchdog entries on emergency run
+

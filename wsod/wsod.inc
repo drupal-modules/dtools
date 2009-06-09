@@ -1,8 +1,15 @@
 <?php
-/*
-	version: $Id$
-	author: kenorb@gmail.com
-*/
+
+/**
+ * @file
+ *   Include file contain additional functions
+ *
+ * @version
+ *   $Id$
+ *
+ * @developers:
+ *   Rafal Wieczorek <kenorb@gmail.com>
+ */
 
 /** 
  * Validate theme hook files and callbacks
