@@ -176,6 +176,10 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             $output .= t("Validation theme hooks completed.").$nl;
         }
         /* check menu router hooks */
+        /* Note:
+             Following block could slow down your website even 3x, so it should be executed only when menu handler returns NULL.
+             In some cases this block could detect some problems even menu handler returns not NULL, so it could be moved to the end of this function.
+         */
         $router_item = menu_get_item($path); // get router item
         if (!function_exists($router_item['page_callback'])) { // check if page callback exist
             $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
@@ -194,6 +198,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                 }
             }
         }
+
         /* check forms */
         /* TODO
         $invalid_forms = wsod_check_forms();
