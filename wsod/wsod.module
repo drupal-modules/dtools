@@ -15,9 +15,10 @@
  * Implementation of hook_boot(). Runs even for cached pages.
  */
 function wsod_boot() {
-  global $drupal_path;
+  global $drupal_path, $wsod_exit;
   $drupal_path = getcwd();
   register_shutdown_function('wsod_check_wsod');
+  $wsod_exit = FALSE; // init global variable
 } 
 
 /**
@@ -45,9 +46,9 @@ function wsod_form_alter($form, $form_state, $form_id) {
 /**
  * Implementation of hook_exit().
  */
-function wsod_exit() {
+function wsod_exit($destination = TRUE) {
   global $wsod_exit;
-  $wsod_exit = TRUE; // set each time TRUE if hook_exit was executed
+  $wsod_exit = $destination; // set each time TRUE or destination url if hook_exit was executed
 }
 
 /**
@@ -98,6 +99,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         $output .= t('Backtrace: ') . wsod_get_backtrace().$nl.$nl;
         $verbose ? print $output : print 'n/a' ;
         return;
+    } else if (is_string($wsod_exit)) { // check if $wsod_exit contain new destination url
+      return; // ignore any action if redirection via drupal_goto() is made
     }
 
     if (!function_exists('menu_get_item')) {
