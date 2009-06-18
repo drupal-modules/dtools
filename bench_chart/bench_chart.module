@@ -100,7 +100,7 @@ function bench_chart_shutdown() {
 function bench_chart_save_to_db() {
     global $hooks_run;
 
-    $menu = (function_exists('menu_get_item') && !defined('MAINTENANCE_MODE')) ? menu_get_item() : NULL; // get alias to the current menu (if menu is already loaded)
+    $menu = (function_exists('menu_get_item') && function_exists('arg') && !defined('MAINTENANCE_MODE')) ? menu_get_item() : NULL; // get alias to the current menu (if menu is already loaded)
     $path = !empty($menu['path']) ? $menu['path'] : $_GET['q']; // set alias, if doesn't exist, get path directly
     $totaltime = (float)0;
     foreach ($hooks_run as $hook_name => $hook) { // for each executed hook
@@ -116,7 +116,7 @@ function bench_chart_save_to_db() {
 	    }
 	    $totaltime += $calc_time;
 	    db_query("REPLACE INTO {bench_chart} (hook, count, time, totaltime, path) VALUES ('%s', '%d', '%f', '%f', '%s')", $hook_name, $count, $calc_time, $totaltime, $path);
-            if ($calc_time>1000) { // TODO
+            if ($calc_time>2000) { // TODO: Move to the settings
                 bench_chart_run_hook($hook_name);
             }
 	}
