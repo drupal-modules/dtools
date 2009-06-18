@@ -51,6 +51,7 @@ function wsod_detect_drupal_path(&$output, $start_dir = __FILE__) {
         } else {
             $buff_output .= "Couldn't find $path$bootstrap_file!<br>\n";
         }
+        // FIXME: file_exists() [function.file-exists]: open_basedir restriction in effect. File(//includes/bootstrap.inc) is not within the allowed path(s)
     }
     $output .= $buff_output;
     return NULL;
