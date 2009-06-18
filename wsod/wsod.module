@@ -107,6 +107,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
              causing several errors with 'Call to undefined function'.
              There are too many dependencies, so if this will happen, it's better to stop at this stage
           */
+        $output = ltrim($output);
         if (!empty($output)) {
             watchdog('wsod', $output); // log the error
         }
@@ -141,7 +142,10 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     // CHECK FOR FATAL ERRORS again
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $verbose ? print $output : print 'n/a' ;
-        watchdog('wsod', $output); // log the error
+        $output = ltrim($output);
+        if (!empty($output)) {
+          watchdog('wsod', $output); // log the error
+        }
         return; // can't continue, if there is some fatal error
     }
 
@@ -271,6 +275,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
     $output = ltrim($output); // remove spaces from output
     if (!empty($output)) {
+        $output = ltrim($output);
         watchdog('wsod', $output); // log the error
     }
     return $output;
