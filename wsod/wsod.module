@@ -55,12 +55,17 @@ function wsod_exit($destination = TRUE) {
  * Detect WSOD and fix it
  * 
  * @param bool $verbose
+ *   if TRUE, print debug output to the screen
  * @param bool $fix_on_fly
+ *   if TRUE, wsod will try to fix the problem on the fly
+ * @param bool $emergency
+ *   if TRUE, make additional checking for WSODs (could spent even 3x time)
  * @return string
+ *   returns diagnostics messages
  * 
  */
 function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE) {
-    global $drupal_path;
+    global $drupal_path, $wsod_rendered;
 
     // init variables
     if (!function_exists('t')) {
@@ -175,29 +180,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         } else {
             $output .= t("Validation theme hooks completed.").$nl;
         }
-        /* check menu router hooks */
-        /* Note:
-             Following block could slow down your website even 3x, so it should be executed only when menu handler returns NULL.
-             In some cases this block could detect some problems even menu handler returns not NULL, so it could be moved to the end of this function.
-         */
-        $router_item = menu_get_item($path); // get router item
-        if (!function_exists($router_item['page_callback'])) { // check if page callback exist
-            $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
-        } else {
-            wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
-            if (empty($content)) { // check if page callback returned some content
-                $output .= t("ERROR: Callback: %callback() returned empty content!",array('%callback' => $router_item['page_callback'])).$nl;
-                $output .= t("NOTICE: router_item = %item!",array('%item' => print_r($router_item,true))).$nl;
-                if ($fix_on_fly) { // if fix mode, then fix the errors
-                    module_load_include('inc', 'system', 'system.admin'); // include functions
-                    $output .= wsod_clear_caches(); // clear all caches
-                    module_rebuild_cache();
-                    $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
-                } else {
-                    $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
-                }
-            }
-        }
 
         /* check forms */
         /* TODO
@@ -218,14 +200,21 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         $output .= t("Done.").$nl;
     } else {
       /* Standard Drupal behavior section. */
+      $title = drupal_set_title();
       switch ($return) {
         case MENU_NOT_FOUND:
             ob_start(); // start buffering
             drupal_not_found(); // return page not found, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
-                $err = t('ERROR: Page is empty!').$nl;
-            } else {
+                $output .= t('MENU_NOT_FOUND: Rendered page is empty!').$nl;
+                if ($fix_on_fly) {
+                  module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
+                  $output .= t('Module list refreshed!').$nl;
+                  drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
+                  $output .= t('Theme registry has been removed from cache!').$nl;
+                }
+            } else if (empty($title)) { // 
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
                     /* TODO: don't print it twice */
@@ -238,7 +227,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             drupal_access_denied(); // return permission denied page , there can be some status error messages
             $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
-                $err = t('ERROR: Page is empty!').$nl;
+                $output .= t('MENU_ACCESS_DENIED: Rendered page is empty!').$nl;
+                if ($fix_on_fly) {
+                  module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
+                  $output .= t('Module list refreshed!').$nl;
+                  drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
+                  $output .= t('Theme registry has been removed from cache!').$nl;
+                }
             } else {
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
@@ -252,7 +247,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             drupal_site_offline(); // return site offline page, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
-                $err = t('ERROR: Page is empty!').$nl;
+                $output .= t('MENU_SITE_OFFLINE: Rendered page is empty!').$nl;
+                if ($fix_on_fly) {
+                  module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
+                  $output .= t('Module list refreshed!').$nl;
+                  drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
+                  $output .= t('Theme registry has been removed from cache!').$nl;
+                }
             } else {
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
@@ -270,7 +271,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             }
             $page_output = theme('page', $return); // return page not found, there can be some status error messages
             if (empty($page_output)) {
-                $err = t('ERROR: Page is empty!').$nl;
+                $output .= t('DEFAULT: Rendered page is empty!').$nl;
+                if ($fix_on_fly) {
+                  module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
+                  $output .= t('Module list refreshed!').$nl;
+                  drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
+                  $output .= t('Theme registry has been removed from cache!').$nl;
+                }
                 if ($emergency) {
                     /* TODO: don't print it twice */
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => "$return")).$nl);
@@ -280,6 +287,34 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             }
       }
     }
+    
+    if (is_null($return) || $emergency) {
+      /* check menu router hooks */
+      /* Note:
+           Following block could slow down your website even 3x, 
+           so it should be executed only when menu handler returns NULL or wsod checking it in emergency mode.
+       */
+      $router_item = menu_get_item($path); // get router item
+      $router_callback = $router_item['page_callback'];
+      if (!empty($router_callback) && !function_exists($router_callback)) { // check if page callback exist
+          $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
+      } else if (!empty($router_callback)) {
+          wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
+          if (empty($content)) { // check if page callback returned some content
+              $output .= t("ERROR: Callback: %callback() returned empty content!",array('%callback' => $router_callback)).$nl;
+              $output .= t("NOTICE: router_item = %item!",array('%item' => print_r($router_item,true))).$nl;
+              if ($fix_on_fly) { // if fix mode, then fix the errors
+                  module_load_include('inc', 'system', 'system.admin'); // include functions
+                  $output .= wsod_clear_caches(); // clear all caches
+                  module_rebuild_cache();
+                  $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
+              } else {
+                  $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
+              }
+          }
+      }
+    }
+
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
     $output = ltrim($output); // remove spaces from output
     if (!empty($output)) {
@@ -450,129 +485,3 @@ function wsod_sess_close() {
   wsod_check_wsod(TRUE);
   return TRUE;
 }
-
-/**
- * WSOD version of Drupal drupal_bootstrap()
- */
-function wsod_drupal_bootstrap_run($phase) {
-  static $phases = array(DRUPAL_BOOTSTRAP_CONFIGURATION, DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE, DRUPAL_BOOTSTRAP_DATABASE, DRUPAL_BOOTSTRAP_ACCESS, DRUPAL_BOOTSTRAP_SESSION, DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE, DRUPAL_BOOTSTRAP_LANGUAGE, DRUPAL_BOOTSTRAP_PATH, DRUPAL_BOOTSTRAP_FULL), $phase_index = 0;
-
-  while ($phase >= $phase_index && isset($phases[$phase_index])) {
-    $current_phase = $phases[$phase_index];
-    unset($phases[$phase_index++]);
-    wsod_drupal_bootstrap($current_phase);
-  }
-}
-
-/**
- * WSOD version of Drupal _drupal_bootstrap()
- *
- * Modifications:
- * - replace handler sess_close() by WSOD
- *   Some fatal errors can't be handled by set_error_handler(), but can be handled by session_set_save_handler()
- *
- * @param $phase
- *   A constant. Allowed values are:
- *     DRUPAL_BOOTSTRAP_CONFIGURATION: initialize configuration.
- *     DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE: try to call a non-database cache fetch routine.
- *     DRUPAL_BOOTSTRAP_DATABASE: initialize database layer.
- *     DRUPAL_BOOTSTRAP_ACCESS: identify and reject banned hosts.
- *     DRUPAL_BOOTSTRAP_SESSION: initialize session handling.
- *     DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE: load bootstrap.inc and module.inc, start
- *       the variable system and try to serve a page from the cache.
- *     DRUPAL_BOOTSTRAP_LANGUAGE: identify the language used on the page.
- *     DRUPAL_BOOTSTRAP_PATH: set $_GET['q'] to Drupal path of request.
- *     DRUPAL_BOOTSTRAP_FULL: Drupal is fully loaded, validate and fix input data.
- */
-function wsod_drupal_bootstrap($phase) {
-  global $conf;
-
-  switch ($phase) {
-
-    case DRUPAL_BOOTSTRAP_CONFIGURATION:
-      drupal_unset_globals();
-      // Start a page timer:
-      timer_start('page');
-      // Initialize the configuration
-      conf_init();
-      break;
-
-    case DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE:
-      // Allow specifying special cache handlers in settings.php, like
-      // using memcached or files for storing cache information.
-      require_once variable_get('cache_inc', './includes/cache.inc');
-      // If the page_cache_fastpath is set to TRUE in settings.php and
-      // page_cache_fastpath (implemented in the special implementation of
-      // cache.inc) printed the page and indicated this with a returned TRUE
-      // then we are done.
-      if (variable_get('page_cache_fastpath', FALSE) && page_cache_fastpath()) {
-        exit;
-      }
-      break;
-
-    case DRUPAL_BOOTSTRAP_DATABASE:
-      // Initialize the default database.
-      require_once './includes/database.inc';
-      db_set_active();
-      break;
-
-    case DRUPAL_BOOTSTRAP_ACCESS:
-      // Deny access to hosts which were banned - t() is not yet available.
-      if (drupal_is_denied('host', ip_address())) {
-        header('HTTP/1.1 403 Forbidden');
-        print 'Sorry, '. check_plain(ip_address()) .' has been banned.';
-        exit();
-      }
-      break;
-
-    case DRUPAL_BOOTSTRAP_SESSION:
-      require_once variable_get('session_inc', './includes/session.inc');
-      session_set_save_handler('sess_open', 'wsod_sess_close', 'sess_read', 'sess_write', 'sess_destroy_sid', 'sess_gc'); // WSOD: replace wsod handle for sess_close()
-      if(!isset($_SESSION)){ // WSOD: additional condition if session has been already started
-          session_start();
-      }
-      break;
-
-    case DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE:
-      // Initialize configuration variables, using values from settings.php if available.
-      $conf = variable_init(isset($conf) ? $conf : array());
-      $cache_mode = variable_get('cache', CACHE_DISABLED);
-      // Get the page from the cache.
-      $cache = $cache_mode == CACHE_DISABLED ? '' : page_get_cache();
-      // If the skipping of the bootstrap hooks is not enforced, call hook_boot.
-      if (!$cache || $cache_mode != CACHE_AGGRESSIVE) {
-        // Load module handling.
-        require_once './includes/module.inc';
-        bootstrap_invoke_all('boot');
-      }
-      // If there is a cached page, display it.
-      if ($cache) {
-        drupal_page_cache_header($cache);
-        // If the skipping of the bootstrap hooks is not enforced, call hook_exit.
-        if ($cache_mode != CACHE_AGGRESSIVE) {
-          bootstrap_invoke_all('exit');
-        }
-        // We are done.
-        exit;
-      }
-      // Prepare for non-cached page workflow.
-      drupal_page_header();
-      break;
-
-    case DRUPAL_BOOTSTRAP_LANGUAGE:
-      drupal_init_language();
-      break;
-
-    case DRUPAL_BOOTSTRAP_PATH:
-      require_once './includes/path.inc';
-      // Initialize $_GET['q'] prior to loading modules and invoking hook_init().
-      drupal_init_path();
-      break;
-
-    case DRUPAL_BOOTSTRAP_FULL:
-      require_once './includes/common.inc';
-      _drupal_bootstrap_full();
-      break;
-  }
-}
-
