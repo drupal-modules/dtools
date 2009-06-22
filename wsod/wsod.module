@@ -217,7 +217,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             } else if (empty($title)) { // 
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
-                    /* TODO: don't print it twice */
+                  wsod_validate_menu_router();
+                  $output .= t('Menu router table rebuilded!').$nl;
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl);
                 }
             }
@@ -299,8 +300,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       if (!empty($router_callback) && !function_exists($router_callback)) { // check if page callback exist
           $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
       } else if (!empty($router_callback)) {
-          wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
-          if (empty($content)) { // check if page callback returned some content
+          $res = wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
+          if (empty($res)) { // check if page callback returned some content
               $output .= t("ERROR: Callback: %callback() returned empty content!",array('%callback' => $router_callback)).$nl;
               $output .= t("NOTICE: router_item = %item!",array('%item' => print_r($router_item,true))).$nl;
               if ($fix_on_fly) { // if fix mode, then fix the errors
@@ -311,6 +312,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
               } else {
                   $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
               }
+          } else {
+            $output .= $res; // output rendered result
           }
       }
     }
@@ -322,6 +325,21 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         watchdog('wsod', $output); // log the error
     }
     return $output;
+}
+
+/**
+ * Check menu_router table, if it's truncated
+ * 
+ * Read more:
+ *  http://drupal.org/node/238760 (menu_router table truncated and site goes down)
+ *  http://drupal.org/node/496198 (module_list() is broken in 6.x)
+ * 
+ */
+function wsod_validate_menu_router() {
+  if (!db_result(db_query("SELECT * FROM menu_router WHERE path = '%s'", 'node'))) {
+    module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
+    menu_router_build(TRUE); // Rebuild menu_router table
+  }
 }
 
 /**
@@ -427,7 +445,11 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
     }
 }
 
+/**
+ * Check forms
+ */
 function wsod_check_forms() {
+  // TODO
   global $active_forms;
   $active_forms=array_unique($active_forms); // remove duplicates
   $empty_forms = array();
@@ -456,32 +478,4 @@ function wsod_check_forms() {
     }
   }
   return array_unique($empty_forms);
-}
-
-/**
- * Get content type of page header 
- * 
- * @return string
- * 
- */
-function wsod_get_header_content_type($header = 'text/html') {
-  $headers = explode("\n", drupal_get_headers());
-  $ct_key = 'Content-Type: ';
-  foreach ($headers as $header_line) {
-    if (($pos = strpos($ct_key, $header_line)) === FALSE) {
-      $header = substr($header_line, $pos+strlen($ct_key));
-    }
-  }
-  return $header;
-}
-
-/**
- * Get content type of page header 
- * 
- * @return string
- * 
- */
-function wsod_sess_close() {
-  wsod_check_wsod(TRUE);
-  return TRUE;
 }

@@ -241,3 +241,14 @@ function wsod_strposall($haystack,$needle){
         return false; 
     } 
 } 
+
+/**
+ * Get content type of page header 
+ * 
+ * @return string
+ * 
+ */
+function wsod_sess_close() {
+  wsod_check_wsod(TRUE);
+  return TRUE;
+}

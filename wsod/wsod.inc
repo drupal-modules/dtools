@@ -63,6 +63,8 @@ function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages, &$
             }
             $messages .= t("Checking %function() page callback...",array('%function' => $router_item['page_callback'])).$nl; // PRINT included file
             $res = call_user_func_array($router_item['page_callback'], $router_item['page_arguments']);
+        } else {
+            $messages .= t("User permission denied to execute %function() page callback...",array('%function' => $router_item['page_callback'])).$nl;
         }
     }
     $content_output = ob_get_clean(); // get output
