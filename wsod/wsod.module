@@ -337,9 +337,28 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
  */
 function wsod_validate_menu_router() {
   if (!db_result(db_query("SELECT * FROM menu_router WHERE path = '%s'", 'node'))) {
-    module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
-    menu_router_build(TRUE); // Rebuild menu_router table
+    wsod_rebuild_menu_router_table(); // Rebuild menu_router table
   }
+}
+
+/**
+ * Rebuild system table
+ *
+ */
+function wsod_rebuild_system_table() {
+  require_once './includes/file.inc'; // needed for file_scan_directory()
+  require_once './modules/system/system.module'; // needed for system_get_files_database()
+  module_rebuild_cache(); // rebuild paths in system table
+}
+
+/**
+ * Rebuild menu_router table
+ *
+ */
+function wsod_rebuild_menu_router_table() {
+  module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL); // we need enter into FULL bootstrap mode to fully rebuild menu_router table
+  menu_router_build(TRUE); // Rebuild menu_router table
 }
 
 /**
