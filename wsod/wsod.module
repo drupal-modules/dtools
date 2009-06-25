@@ -443,9 +443,21 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
         }
     } else if (strpos($error,"Call to undefined function") !== FALSE) {
         if ($fix_on_fly) { // if fix mode, then fix the errors
+          wsod_rebuild_system_table(); // rebuild system table
+          $output .= 'Rebuild system table.<br>\n';
+          wsod_force_module_load_all(); // force module load
+          $output .= 'Force to load all enabled module files.<br>\n';
+          preg_match('/(?P<func_prefix>[a-z0-9]+)_/', $error, $matches);
+          $module_prefix = $matches['func_prefix'];
+          //$func_name = $matches['func_name']; // TODO
+          $module_name = db_result(db_query("SELECT name FROM {system} WHERE name LIKE '$module_name%%' AND status = 0 LIMIT 1"));
+          if ($module_name && db_query("UPDATE {system} SET status = 1 WHERE name LIKE '$module_name%%' AND status = 0 LIMIT 1")) {
+            $output .= 'Enabled potential dependency module: $module_name.<br>\n';
+          }
+          $output .= 'Please refresh the page if problem has been fixed.<br>\n';
             /* TODO:
-                Solution 1:
-                    We can load all module files and check where it's defined.
+                Another Solution:
+                    Eventually we can load all module files and check where it's defined.
                     After that we can compare and check if the module weight is correct.
                     Needed module can be detected from $error via function name.
                     Dependend module can be detected via filename $error['file']
@@ -453,14 +465,21 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
                     Example code:
                         $weight = (int) db_result(db_query("SELECT weight FROM {system} WHERE name = 'module1'"));
                         db_query("UPDATE {system} SET weight = %d WHERE name = 'module2'", $weight + 1);
-                Solution 2:
-                    If module with specified function wasn't found, maybe there is wrong dependency.
-                    Propose to user to install missing module (get module name from $error).
              */
         }
     }
     if (!$fix_on_fly) {
         $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
+    }
+}
+
+/**
+ * Force load all enabled modules
+ *
+ */
+function wsod_force_module_load_all() {
+    foreach (module_list(TRUE, FALSE) as $name) {
+      include_once drupal_get_filename('module', $name);
     }
 }
 
