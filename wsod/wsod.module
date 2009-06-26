@@ -98,6 +98,15 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
 
     $output = ''; // init output
 
+    // ignore if we are on non-html page
+    $headers = drupal_get_headers(); // FIXME: any other way to get headers?
+    $ignore_formats = array('xml', 'javascript', 'json', 'plain', 'image', 'application', 'csv', 'x-comma-separated-values');
+        foreach ($ignore_formats as $format) {
+        if (strstr($headers, $format)) {
+            return;
+        }
+    }
+
     global $wsod_exit;
     if (!$wsod_exit) {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
@@ -120,15 +129,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             watchdog('wsod', $output); // log the error
         }
         return;
-    }
-
-    // ignore if we are on non-html page
-    $headers = drupal_get_headers(); // FIXME: any other way to get headers?
-    $ignore_formats = array('xml', 'javascript', 'json', 'plain', 'image', 'application', 'csv', 'x-comma-separated-values');
-        foreach ($ignore_formats as $format) {
-        if (strstr($headers, $format)) {
-            return;
-        }
     }
 
     // ignore some specified callbacks (like Rebuilding permissions)
