@@ -201,6 +201,10 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     } else {
       /* Standard Drupal behavior section. */
       $title = drupal_set_title();
+      if ($emergency) {
+        wsod_validate_menu_router();
+        $output .= t('Menu router table rebuild!') . $nl;
+      }
       switch ($return) {
         case MENU_NOT_FOUND:
             ob_start(); // start buffering
@@ -216,11 +220,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                 }
             } else if (empty($title)) { // 
                 $output .= $page_output; // if nothing to show, output standard page not found
-                if ($emergency) {
-                  wsod_validate_menu_router();
-                  $output .= t('Menu router table rebuilded!').$nl;
-                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_NOT_FOUND')).$nl);
-                }
             }
         break;
         case MENU_ACCESS_DENIED:
