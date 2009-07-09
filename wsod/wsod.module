@@ -216,7 +216,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
                   $output .= t('Module list refreshed!').$nl;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been removed from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').$nl;
                 }
             } else if (empty($title)) { // 
                 $output .= $page_output; // if nothing to show, output standard page not found
@@ -232,7 +232,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
                   $output .= t('Module list refreshed!').$nl;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been removed from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').$nl;
                 }
             } else {
                 $output .= $page_output; // if nothing to show, output standard page not found
@@ -252,7 +252,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
                   $output .= t('Module list refreshed!').$nl;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been removed from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').$nl;
                 }
             } else {
                 $output .= $page_output; // if nothing to show, output standard page not found
@@ -276,7 +276,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
                   $output .= t('Module list refreshed!').$nl;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been removed from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').$nl;
                 }
                 if ($emergency) {
                     /* TODO: don't print it twice */
@@ -298,6 +298,10 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       $router_callback = $router_item['page_callback'];
       if (!empty($router_callback) && !function_exists($router_callback)) { // check if page callback exist
           $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
+          drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
+          $output .= t('Theme registry has been cleared from cache!').$nl;
+          wsod_rebuild_menu_router_table();
+          $output .= t('menu_router table rebuild!').$nl;
       } else if (!empty($router_callback)) {
           $res = wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
           if (empty($res)) { // check if page callback returned some content
