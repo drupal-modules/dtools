@@ -25,14 +25,43 @@ function wsod_boot() {
  * Implementation of hook_menu().
  */
 function wsod_menu() {
-  $items['wsod'] = array(
+  $items['admin/build/dtools'] = array(
+    'title' => 'Diagnostics Tools',
+    'description' => t('Diagnostics tools only for advanced users.'),
+    'page callback' => 'drupal_get_form', 
+    'page arguments' => array('wsod_admin_form'),
+    'access arguments' => array('administer dtools'),
+    'file' => 'wsod.admin.inc', 
+  );
+  $items['admin/build/dtools/wsod'] = array(
+    'title' => t('Diagnostics Tools'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -9,
+  ); 
+  $items['admin/build/dtools/rebuild'] = array(
+    'title' => 'Rebuild menu',
+    'page arguments' => array('wsod_menu_rebuild_confirm'),
+    'file' => 'wsod.admin.inc',
+    'access arguments' => array('administer dtools'),
+    'type' => MENU_CALLBACK,
+  ); 
+  /*
+  $items['wsod'] = array( // TODO: not tested yet
     'title' => 'WSOD',
     'page callback' => 'wsod_check_wsod',
     'page arguments' => array(TRUE),
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
-  return $items; // TODO: not tested yet
+   */
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function wsod_perm() {
+   return array('administer dtools');
 }
 
 /**
@@ -86,9 +115,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         chdir($drupal_path);
     }
 
-    // ignore wsod checking on batch processing and maintenance work
+    // ignore wsod checking on batch processing and maintenance work or it's disabled
     if (defined('MAINTENANCE_MODE') || isset($_SESSION['batch_form_state'])) {
         return;
+    }
+
+    if (!$emergency && variable_get('wsod_live_checking', FALSE) == FALSE) {
+      return;
     }
    
     // ignore wsod checking on POST forms, it breaking the forms (#416616) (TODO: later it could be supported - )
@@ -336,11 +369,17 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
  * Read more:
  *  http://drupal.org/node/238760 (menu_router table truncated and site goes down)
  *  http://drupal.org/node/496198 (module_list() is broken in 6.x)
+ *  http://drupal.org/node/514898 (ERROR: Callback: system_main_admin_page() doesn't exist!)
  * 
  */
 function wsod_validate_menu_router() {
-  if (!db_result(db_query("SELECT * FROM menu_router WHERE path = '%s'", 'node'))) {
-    wsod_rebuild_menu_router_table(); // Rebuild menu_router table
+  if (db_result(db_query("SELECT COUNT(*) FROM {menu_router} WHERE path = '%s' OR path LIKE '%s'", 'node', 'admin/build/dtools')) <> 2) {
+    wsod_rebuild_menu_router_table(); // Rebuild menu_router, menu_links tables
+  }
+  /* Validate admin tree - http://drupal.org/node/514898 */
+  if (db_result(db_query("SELECT mlid FROM {menu_links} WHERE link_path = '%s' AND module = '%s'", 'admin', 'system')) > 2) { 
+    wsod_rebuild_menu_router_table(); // Rebuild menu_router, menu_links tables
+    // FIXME: menu_router rebuilding could not solve the problem, try disable modules which hook_menu_alter implementation like admin_menu
   }
 }
 
@@ -361,7 +400,7 @@ function wsod_rebuild_system_table() {
 function wsod_rebuild_menu_router_table() {
   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL); // we need enter into FULL bootstrap mode to fully rebuild menu_router table
-  menu_router_build(TRUE); // Rebuild menu_router table
+  menu_rebuild(); // Rebuild menu_router, menu_links tables
 }
 
 /**
@@ -377,6 +416,9 @@ function wsod_get_backtrace() {
       $filename = basename($backtrace[$index]['file']);
       $buffer .= "$function($filename:$line);";
   } 
+  if (empty($buffer)) {
+    $buffer = 'n/a';
+  }
   return $buffer;
 }
 
