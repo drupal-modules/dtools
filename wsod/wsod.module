@@ -408,16 +408,15 @@ function wsod_rebuild_menu_router_table() {
  */
 function wsod_get_backtrace() {
   $backtrace = debug_backtrace(TRUE);
-  array_shift($backtrace); // remove this function from array
-  array_shift($backtrace); // remove wsod function
-  foreach ($backtrace as $index => $function) {
-      $function = $function['function'];
-      $line = $backtrace[$index]['line'];
-      $filename = basename($backtrace[$index]['file']);
-      $buffer .= "$function($filename:$line);";
-  } 
-  if (empty($buffer)) {
-    $buffer = 'n/a';
+  if (is_array($backtrace)) {
+    array_shift($backtrace); // remove this function from array
+    array_shift($backtrace); // remove wsod function
+    foreach ($backtrace as $index => $function) {
+        $function = $function['function'];
+        $line = $backtrace[$index]['line'];
+        $filename = basename($backtrace[$index]['file']);
+        $buffer .= "$function($filename:$line);";
+    } 
   }
   return $buffer;
 }
