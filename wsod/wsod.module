@@ -418,6 +418,9 @@ function wsod_get_backtrace() {
         $buffer .= "$function($filename:$line);";
     } 
   }
+  if (empty($buffer)) {
+    $buffer = 'n/a';
+  }
   return $buffer;
 }
 
