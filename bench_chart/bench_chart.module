@@ -1,8 +1,16 @@
 <?php
-/*
-	version: $Id$
-	author: kenorb@gmail.com
-*/
+
+/**
+ * @file
+ *   Bench Chart module measure execution time of specified hooks
+ *
+ * @version
+ *   $Id$
+ *
+ * @developer:
+ *    Rafal Wieczorek <kenorb@gmail.com>
+ */
+
 $bench_chart_timer = timer_start('bench_chart');
 bench_chart_my_hook(array('(load)', 'start'));
 
@@ -10,24 +18,24 @@ bench_chart_my_hook(array('(load)', 'start'));
 
 function bench_chart_get_hooks() {
     return array(
-	'init', 'access', 'actions_delete', 'action_info', 'action_info_alter', 'block', 'comment', 'db_rewrite_sql', 'delete', 
-
-	'elements', 'file_download', 'filter', 'filter_tips', 'flush_caches', 'footer', 'form', 'forms', 'form_alter',
-	'help', 'hook_info', 'insert', 'link', 'link_alter', 'locale', 'mail', 'mail_alter', 'menu_alter',
-	'menu_link_alter', 'nodeapi', 'node_access_records', 'node_info', 'node_operations', 'node_type', 'ping', 'prepare', 'profile_alter', 'requirements',
-	'schema_alter', 'search', 'search_preprocess', 'system_info_alter', 'taxonomy', 'term_path', 'theme_registry_alter', 'translated_menu_link_alter', 'disable', 'update', 
-	'update_index', 'update_status_alter', 'user', 'user_operations', 'validate', 'view', 'watchdog', 'xmlrpc', 'content_extra_fields', 'content_build_modes', 'views_default_views',
-	'flag_definitions', 'node_grants',
+    'init', 'access', 'actions_delete', 'action_info', 'action_info_alter', 'block', 'comment', 'db_rewrite_sql', 'delete', 
+    'elements', 'file_download', 'filter', 'filter_tips', 'flush_caches', 'footer', 'form', 'forms', 'form_alter',
+    'help', 'hook_info', 'insert', 'link', 'link_alter', 'locale', 'mail', 'mail_alter', 'menu_alter',
+    'menu_link_alter', 'nodeapi', 'node_access_records', 'node_info', 'node_operations', 'node_type', 'ping', 'prepare', 'profile_alter', 'requirements',
+    'schema_alter', 'search', 'system_info_alter', 'taxonomy', 'term_path', 'theme_registry_alter', 'translated_menu_link_alter', 'disable', 'update', 
+    'update_index', 'update_status_alter', 'user', 'user_operations', 'validate', 'view', 'watchdog', 'xmlrpc', 'content_extra_fields', 'content_build_modes', 'views_default_views',
+    'flag_definitions', 'node_grants',
         /* node hooks */
         'load', 
     );
-	//'schema',
-	//'install',
-	//'uninstall',
-	//'enable',
-	//'cron',
-	// 'exit',   // TODO
-	// 'theme',  // TODO
+    //'schema',
+    //'install',
+    //'uninstall',
+    //'enable',
+    //'cron',
+    // 'exit',   // TODO
+    // 'theme',  // TODO
+    // 'search_preprocess', // TODO
 }
 
 function bench_chart_gen_hooks($fname = 'bench_chart', $type = 'end') { // generate function hooks
@@ -66,18 +74,18 @@ function bench_chart_perm() {
 function bench_chart_menu() {
     bench_chart_my_hook(array('menu','start'));
     $items['admin/reports/charts/hook_stat'] = array(
-	'access arguments'  => array('access site reports'),
-	'file'              => 'bench_chart_charts.inc',
-	'page callback'     => 'bench_chart_charts',
-	'title'             => 'Hooks',
-	'type'              => MENU_LOCAL_TASK
+    'access arguments'  => array('access site reports'),
+    'file'              => 'bench_chart_charts.inc',
+    'page callback'     => 'bench_chart_charts',
+    'title'             => 'Hooks',
+    'type'              => MENU_LOCAL_TASK
     );
     $items['admin/settings/hook_chart'] = array(
-	'access arguments'  => array('access site reports'),
-	'file'              => 'bench_chart_conf.inc',
-	'page callback'     => 'bench_chart_conf',
-	'title'             => 'Hook Chart',
-	'type'              => MENU_LOCAL_TASK
+    'access arguments'  => array('access site reports'),
+    'file'              => 'bench_chart_conf.inc',
+    'page callback'     => 'bench_chart_conf',
+    'title'             => 'Hook Chart',
+    'type'              => MENU_LOCAL_TASK
     );
     return $items;
 }
@@ -104,22 +112,22 @@ function bench_chart_save_to_db() {
     $path = !empty($menu['path']) ? $menu['path'] : $_GET['q']; // set alias, if doesn't exist, get path directly
     $totaltime = (float)0;
     foreach ($hooks_run as $hook_name => $hook) { // for each executed hook
-	$calc_time = (float)0;
-	$count = 0;
-	if (isset($hook['start']) && is_array($hook['start'])) {
-	    foreach ($hook['start'] as $key => $time) { // for each calculated time
-		$count++;
-		if (isset($hook['end'])) {
-		    $calc_time += ($hook['end'][$key] - $hook['start'][$key]);
-		    $lasttime = $hook['end'][$key];
-		}
-	    }
-	    $totaltime += $calc_time;
-	    db_query("REPLACE INTO {bench_chart} (hook, count, time, totaltime, path) VALUES ('%s', '%d', '%f', '%f', '%s')", $hook_name, $count, $calc_time, $totaltime, $path);
+    $calc_time = (float)0;
+    $count = 0;
+    if (isset($hook['start']) && is_array($hook['start'])) {
+        foreach ($hook['start'] as $key => $time) { // for each calculated time
+        $count++;
+        if (isset($hook['end'])) {
+            $calc_time += ($hook['end'][$key] - $hook['start'][$key]);
+            $lasttime = $hook['end'][$key];
+        }
+        }
+        $totaltime += $calc_time;
+        db_query("REPLACE INTO {bench_chart} (hook, count, time, totaltime, path) VALUES ('%s', '%d', '%f', '%f', '%s')", $hook_name, $count, $calc_time, $totaltime, $path);
             if ($calc_time>2000) { // TODO: Move to the settings
                 bench_chart_run_hook($hook_name);
             }
-	}
+    }
     }
     //$time_rest = ($totaltime - ($lasttime - $hooks_run['(before boot)']['start'][0]));
     //db_query("INSERT INTO {bench_chart} (hook, count, time, totaltime, path) VALUES ('%s', '%s', '%s', '%s', '%s')", '(other)', 1, $time_rest, $totaltime, $path);
@@ -145,9 +153,9 @@ function bench_chart_my_hook() {
     $hooks_run[$hook][$type][] = (float)$timer;
     $hooks_run[$hook]['#args'][] = $args;
     switch ($hook) {
-	case 'exit':
-	    $hooks_run['(exit)']['start'][] = (float)$timer;
-	break;
+    case 'exit':
+        $hooks_run['(exit)']['start'][] = (float)$timer;
+    break;
     }
 }
 
