@@ -140,6 +140,20 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         }
     }
 
+    /* check core modules */
+    if ($disabled_module = wsod_check_core_modules(array('node', 'system'))) {
+        $output .= t("Following core module is disabled: $disabled_module!").$nl;
+        if ($fix_on_fly) {
+          module_enable(array($disabled_module));
+          wsod_clear_caches(); // clear all caches
+          module_rebuild_cache(); // rebuild paths in system table
+          $output .= t("Fixing by enabling $disabled_module core module!").$nl;
+        }
+        $verbose ? print $output : print 'n/a' ;
+        return;
+    }
+
+    /* check if hook_exit has been executed properly */
     global $wsod_exit;
     if (!$wsod_exit) {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
@@ -381,6 +395,23 @@ function wsod_validate_menu_router() {
     wsod_rebuild_menu_router_table(); // Rebuild menu_router, menu_links tables
     // FIXME: menu_router rebuilding could not solve the problem, try disable modules which hook_menu_alter implementation like admin_menu
   }
+}
+
+/**
+ * Check if required core modules are enabled
+ * 
+ * @param array $modules_name
+ *   list of modules to check
+ * @return string
+ *   returns return name of disabled modules, otherwise return NULL
+ */
+function wsod_check_core_modules($modules_name) {
+  foreach ($modules_name as $key => $module_name) {
+    if (!$status = db_result(db_query("SELECT status FROM {system} WHERE name = '%s'", $module_name))) {
+      return $module_name;
+    }
+  }
+  return NULL;
 }
 
 /**
