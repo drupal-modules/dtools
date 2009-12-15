@@ -25,12 +25,14 @@ require_once './includes/menu.inc'; // load menu file (needed for Menu flags)
 wsod_drupal_bootstrap_run(DRUPAL_BOOTSTRAP_FULL); // execute WSOD version of Drupal bootstrap
 $verbose = TRUE; /* redefining - in some cases those function are removed on bootstrap */
 $fix_on_fly  = TRUE; /* redefining - in some cases those function are removed on bootstrap */
-drupal_page_footer();
 
 /* enable wsod module */
 if (!module_exists('wsod')) {
-    module_enable(array('wsod')); // enable wsod module if it's not enabled
+    module_enable(array('wsod')); // enable wsod module if it's not enabled, otherwise we can't run hook_exit
 }
+
+drupal_page_footer();
+
 if (!function_exists('wsod_check_wsod')) { // if wsod testing function doesn't exist, there is some path problem
     module_rebuild_cache(); // so we need to rebuild path of modules
     drupal_load('module', 'wsod'); // load module files again
