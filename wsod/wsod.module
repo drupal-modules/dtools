@@ -155,12 +155,14 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
 
     /* check if hook_exit has been executed properly */
     global $wsod_exit;
-    if (!$wsod_exit) {
+    if (!$wsod_exit && module_exists('wsod')) {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
         $output .= t('Backtrace: ') . wsod_get_backtrace().$nl.$nl;
         $verbose ? print $output : print 'n/a' ;
         return;
     } else if (is_string($wsod_exit)) { // check if $wsod_exit contain new destination url
+      $output .= t("WSOD: Redirection to: ".drupal_get_destination()).$nl;
+      print $output;
       return; // ignore any action if redirection via drupal_goto() is made
     }
 
@@ -530,7 +532,7 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
           //$func_name = $matches['func_name']; // TODO
           $module_name = db_result(db_query("SELECT name FROM {system} WHERE name LIKE '$module_name%%' AND status = 0 LIMIT 1"));
           if ($module_name && db_query("UPDATE {system} SET status = 1 WHERE name LIKE '$module_name%%' AND status = 0 LIMIT 1")) {
-            $output .= "Enabled potential dependency module: $module_name.<br>\n";
+            $output .= 'Enabled potential dependency module: $module_name.<br>\n';
           }
           $output .= 'Please refresh the page if problem has been fixed.<br>\n';
             /* TODO:
