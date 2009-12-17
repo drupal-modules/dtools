@@ -35,7 +35,7 @@ function wsod_menu() {
   );
   $items['admin/build/dtools/wsod'] = array(
     'title' => t('Diagnostics Tools'),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'type' => MENU_NORMAL_ITEM | MENU_DEFAULT_LOCAL_TASK,
     'weight' => -9,
   ); 
   $items['admin/build/dtools/rebuild'] = array(
@@ -81,6 +81,13 @@ function wsod_exit($destination = TRUE) {
 }
 
 /**
+ * Implementation of hook_theme_registry_alter().
+ */
+function wsod_theme_registry_alter(&$items) {
+  /* TODO: check for backtrace if some module mess up with theme registry */
+}
+
+/**
  * Detect WSOD and fix it
  * 
  * @param bool $verbose
@@ -96,6 +103,12 @@ function wsod_exit($destination = TRUE) {
 function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE) {
     global $drupal_path, $wsod_rendered;
 
+    if ($wsod_rendered) {
+      return;
+    } else {
+      $wsod_rendered = TRUE;
+    }
+    
     // init variables
     if (!function_exists('t')) {
       function t($msg, $args = NULL) { return $msg; }
@@ -207,9 +220,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     if (is_null($return)) { /* check menu handler */
-        $output .= t("%function: returned %handler - it's very bad!", array('%function' => 'menu_execute_active_handler()', '%handler' => 'NULL')).$nl;
+        $output .= sprintf("%s: returned %s - it's very bad!", 'menu_execute_active_handler()', 'NULL').$nl;
         $output .= t("WSOD detected!").t('&nbsp;').t("Checking for problems...").$nl;
-        $output .= t("ERROR: %function returned empty value!", array('%function' => 'menu_execute_active_handler()')).$nl;
+        $output .= sprintf(t("ERROR: %s returned empty value!"), 'menu_execute_active_handler()').$nl;
         /* check theme hooks */
         $res = wsod_validate_theme_hooks($verbose, $output);
         if (!$res) {
@@ -316,7 +329,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                 /* TODO: Sometimes can't render page on shutdown, because of some errors recently
                     Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
                  */
-                break;
+                $output .= t('Ignoring page rendering checking, because of incompability with content_profile module.').$nl;
+                //break;
             }
             $page_output = theme('page', $return); // return page not found, there can be some status error messages
             if (empty($page_output)) {
@@ -340,13 +354,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (is_null($return) || $emergency) {
       /* check menu router hooks */
       /* Note:
-           Following block could slow down your website even 3x, 
+           Following block code could slow down your website even 3x, 
            so it should be executed only when menu handler returns NULL or wsod checking it in emergency mode.
        */
       $router_item = menu_get_item($path); // get router item
       $router_callback = $router_item['page_callback'];
       if (!empty($router_callback) && !function_exists($router_callback)) { // check if page callback exist
-          $output .= t("ERROR: Callback: %callback() doesn't exist!<br>",array('%callback' => $router_item['page_callback'])).$nl;
+          $output .= sprintf("ERROR: Callback: %s() doesn't exist!<br>", $router_item['page_callback']).$nl;
           drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
           $output .= t('Theme registry has been cleared from cache!').$nl;
           wsod_rebuild_menu_router_table();
@@ -354,13 +368,14 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       } else if (!empty($router_callback)) {
           $res = wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
           if (empty($res)) { // check if page callback returned some content
-              $output .= t("ERROR: Callback: %callback() returned empty content!",array('%callback' => $router_callback)).$nl;
-              $output .= t("NOTICE: router_item = %item!",array('%item' => print_r($router_item,true))).$nl;
+              $output .= sprintf("ERROR: Callback: %s() returned empty content!", $router_callback).$nl;
+              $output .= sprintf("NOTICE: router_item = %s!", print_r($router_item, TRUE)) . $nl;
               if ($fix_on_fly) { // if fix mode, then fix the errors
                   module_load_include('inc', 'system', 'system.admin'); // include functions
                   $output .= wsod_clear_caches(); // clear all caches
                   module_rebuild_cache();
                   $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
+                  wsod_check_theme_registry($output); // check if theme registry is broken, then rebuild it
               } else {
                   $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
               }
@@ -437,13 +452,47 @@ function wsod_rebuild_menu_router_table() {
 }
 
 /**
+ * Rebuild theme registry
+ *
+ * Note: The reason of broken theme registry could be in example t() call from early stage of Drupal bootstrap (hook_boot)
+ *       So if you have broken contributed module, this function fix the problem only temporary.
+ * TODO: Find the module which messing up with theme registry through backtrace
+ *
+ */
+function wsod_rebuild_theme_registry(&$output = NULL, $nl = "<br>\n") {
+  drupal_rebuild_theme_registry();
+  //module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
+  global $theme;
+  unset($theme); // unset theme global variable to rebuild it
+  unset($GLOBALS['theme']);
+  module_implements('theme', FALSE, TRUE);
+  init_theme(); // Initialize the theme system by loading the theme.
+  $output ? $output .= t('Theme registry has been rebuilt!') . $nl : NULL;
+}
+
+/**
+ * Check issues in theme registry
+ *
+ */
+function wsod_check_theme_registry(&$output = NULL, $nl = "<br>\n") {
+  $output ? $output .= t('Checking theme registry...') . $nl: NULL;
+  $hooks = theme_get_registry();
+  $hook = 'placeholder'; // basic theme hook name, which should exists always in Drupal 6.x
+  if (!isset($hooks[$hook])) {
+    $output ? $output .= t('Missing placeholder in theme registry!') . $nl: NULL;
+    $output ? $output .= sprintf('If problem appears again, please disable or look for invalid hook_boot code in following modules: %s', implode(', ', module_implements('boot'))) . $nl: NULL;
+    wsod_rebuild_theme_registry($output);
+  }
+}
+
+/**
  * Return backtrace
  */
-function wsod_get_backtrace() {
+function wsod_get_backtrace($no_del = 1) {
   $backtrace = debug_backtrace(TRUE);
   if (is_array($backtrace)) {
     array_shift($backtrace); // remove this function from array
-    array_shift($backtrace); // remove wsod function
+    for ($i = 0; $i < $no_del; $i++) { array_shift($backtrace); }
     foreach ($backtrace as $index => $function) {
         $function = $function['function'];
         $line = $backtrace[$index]['line'];
@@ -464,9 +513,9 @@ function wsod_clear_caches() {
     $output = '';
     $nl = t('<br>');
     cache_clear_all(NULL, 'cache');
-    $output .= t("Cleared cache via %function", array('%function' => 'cache_clear_all()')).$nl;
+    $output .= sprintf(t("Cleared cache using %s"), 'cache_clear_all()').$nl;
     drupal_flush_all_caches();
-    $output .= t("Cleared cache via %function", array('%function' => 'drupal_flush_all_caches()')).$nl;
+    $output .= sprintf(t("Cleared cache using %s"), 'drupal_flush_all_caches()').$nl;
     return $output;
 }
 
@@ -504,7 +553,7 @@ function wsod_fatal_error_checker(&$output, $fix_on_fly = TRUE) {
  * Try to fix fatal error
  */
 function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
-    if (strpos($error,"Cannot redeclare cache") !== FALSE) {
+    if (strpos($error, "Cannot redeclare cache") !== FALSE) {
         if ($fix_on_fly) { // if fix mode, then fix the errors
             /* TODO: We can't use Drupal functions in case of fatal error
             module_load_include('inc', 'system', 'system.admin'); // include functions
@@ -513,7 +562,7 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
              */
         }
         $output .= 'Tip: Try to disable additional cache module from your settings.php.<br>\n';
-    } else if (strpos($error,"Cannot redeclare") !== FALSE) {
+    } else if (strpos($error, "Cannot redeclare") !== FALSE) {
         if ($fix_on_fly) { // if fix mode, then fix the errors
             /* TODO: We can't use Drupal functions in case of fatal error
             module_load_include('inc', 'system', 'system.admin'); // include functions
@@ -521,7 +570,7 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
             module_rebuild_cache();
              */
         }
-    } else if (strpos($error,"Call to undefined function") !== FALSE) {
+    } else if (strpos($error, "Call to undefined function") !== FALSE) {
         if ($fix_on_fly) { // if fix mode, then fix the errors
           wsod_rebuild_system_table(); // rebuild system table
           $output .= 'Rebuild system table.<br>\n';
@@ -547,6 +596,8 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
                         db_query("UPDATE {system} SET weight = %d WHERE name = 'module2'", $weight + 1);
              */
         }
+    } else if (strpos($error, "Maximum execution time") !== FALSE) {
+      $output .= 'You need to increase max_execution_time in your php.ini and please install drupal_tweaks module.<br>\n';
     }
     if (!$fix_on_fly) {
         $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;

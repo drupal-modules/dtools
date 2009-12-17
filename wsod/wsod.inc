@@ -23,6 +23,7 @@ function wsod_validate_theme_hooks($verbose = FALSE, &$output) {
     $nl = t('<br>');
     $output .= t("Validating theme hooks...").$nl;
     foreach ($hooks as $hook_name => $hook) {
+        /* TODO: convert t() to sprintf() if t() is in bootstrap mode */
         if (isset($hook['path']) && !file_exists($hook['path'])) {
             $output .= t("ERROR: File or path doesn't exist (path: %path; theme callback: %function)", array('%path' => $hook['path'], '%function' => $hook_name)).$nl;
             $theme_test = false;
@@ -59,12 +60,12 @@ function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages, &$
             if ($router_item['file']) {
                 require_once($router_item['file']);
                 $file = basename($router_item['file']);
-                $messages .= t("Included render file: %file",array('%file' => $file)).$nl; // PRINT included file
+                $messages .= sprintf(t("Included render file: %s"), $file) . $nl; // PRINT included file
             }
-            $messages .= t("Checking %function() page callback...",array('%function' => $router_item['page_callback'])).$nl; // PRINT included file
+            $messages .= sprintf(t("Checking %s() page callback..."), $router_item['page_callback']) . $nl; // PRINT included file
             $res = call_user_func_array($router_item['page_callback'], $router_item['page_arguments']);
         } else {
-            $messages .= t("User permission denied to execute %function() page callback...",array('%function' => $router_item['page_callback'])).$nl;
+            $messages .= sprintf(t("User permission denied to execute %s() page callback..."), $router_item['page_callback']) . $nl;
         }
     }
     $content_output = ob_get_clean(); // get output
