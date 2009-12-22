@@ -113,7 +113,15 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!function_exists('t')) {
       function t($msg, $args = NULL) { return $msg; }
     }
+    $output = '';
     $nl = t('<br>');
+
+    // version request
+    if ($_GET['v']) {
+      $output .= t('Version: $Id$') . $nl;
+      $verbose ? print $output : print 'n/a' ;
+      return;
+    }
 
     // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
@@ -377,7 +385,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
                   wsod_check_theme_registry($output); // check if theme registry is broken, then rebuild it
               } else {
-                  $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
+                  $output .= t("fix_on_fly is no enabled, please enable it to fix the problem") . $nl;
               }
           } else {
             $output .= $res; // output rendered result
