@@ -395,7 +395,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
 
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
     $output = ltrim($output); // remove spaces from output
-    if (!empty($output)) {
+    if (!empty($output) && empty($page_output)) {
         $output = ltrim($output);
         watchdog('wsod', $output); // log the error
     }
