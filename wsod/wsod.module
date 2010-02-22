@@ -100,14 +100,10 @@ function wsod_theme_registry_alter(&$items) {
  *   returns diagnostics messages
  * 
  */
-function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE) {
-    global $drupal_path, $wsod_rendered;
+function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE, $sess_close = FALSE) {
+    global $drupal_path, $wsod_locked;
 
-    if ($wsod_rendered) {
-      return;
-    } else {
-      $wsod_rendered = TRUE;
-    }
+    $wsod_locked = TRUE;
     
     // init variables
     if (!function_exists('t')) {
@@ -207,24 +203,28 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         return;
     }
 
-    module_load_include('inc', 'wsod', 'wsod'); // include functions
+    if (!module_load_include('inc', 'wsod', 'wsod')) { // include functions based on path from system table...
+        require_once dirname(__FILE__) . '/wsod.inc'; // ...otherwise include it manually
+    }
 
     // check input variables
     $path = $_GET['q'];
     isset($_GET['fix']) ? $fix_on_fly = TRUE : NULL; // if fix is defined, then switch to fixing mode
 
     /* check menu handler */
-    ob_start();
-    $return = menu_execute_active_handler(); // use q argument to change default path
-    $content_output = ob_get_clean(); // TODO: what if there is some content?
-    // CHECK FOR FATAL ERRORS again
-    if (wsod_fatal_error_checker($output, $fix_on_fly)) {
-        $verbose ? print $output : print 'n/a' ;
-        $output = ltrim($output);
-        if (!empty($output)) {
-          watchdog('wsod', $output); // log the error
+    if (!$sess_close) { // ignore 2nd call of menu handler when error occurs, in which case wsod is called again
+        ob_start();
+        $return = menu_execute_active_handler(); // use q argument to change default path
+        $content_output = ob_get_clean(); // TODO: what if there is some content?
+        // CHECK FOR FATAL ERRORS again
+        if (wsod_fatal_error_checker($output, $fix_on_fly)) {
+            $verbose ? print $output : print 'n/a' ;
+            $output = ltrim($output);
+            if (!empty($output)) {
+              watchdog('wsod', $output); // log the error
+            }
+            return; // can't continue, if there is some fatal error
         }
-        return; // can't continue, if there is some fatal error
     }
 
     if (is_null($return)) { /* check menu handler */
@@ -308,7 +308,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
                     /* TODO: don't print it twice */
-                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl);
+                    // drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl);
                 }
             }
         break;
@@ -374,23 +374,25 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
           wsod_rebuild_menu_router_table();
           $output .= t('menu_router table rebuild!').$nl;
       } else if (!empty($router_callback)) {
-          $res = wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback
-          if (empty($res)) { // check if page callback returned some content
-              $output .= sprintf("ERROR: Callback: %s() returned empty content!", $router_callback).$nl;
-              $output .= sprintf("NOTICE: router_item = %s!", print_r($router_item, TRUE)) . $nl;
-              if ($fix_on_fly) { // if fix mode, then fix the errors
-                  module_load_include('inc', 'system', 'system.admin'); // include functions
-                  $output .= wsod_clear_caches(); // clear all caches
-                  module_rebuild_cache();
-                  $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
-                  wsod_check_theme_registry($output); // check if theme registry is broken, then rebuild it
+          if (!$sess_close) { // ignore 2nd call of menu handler when error occurs, in which case wsod is called again
+            $res = wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback (inc)
+              if (empty($res)) { // check if page callback returned some content
+                  $output .= sprintf("ERROR: Callback: %s() returned empty content!", $router_callback).$nl;
+                  $output .= sprintf("NOTICE: router_item = %s!", print_r($router_item, TRUE)) . $nl;
+                  if ($fix_on_fly) { // if fix mode, then fix the errors
+                      module_load_include('inc', 'system', 'system.admin'); // include functions
+                      $output .= wsod_clear_caches(); // clear all caches
+                      module_rebuild_cache();
+                      $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
+                      wsod_check_theme_registry($output); // check if theme registry is broken, then rebuild it
+                  } else {
+                      $output .= t("fix_on_fly is no enabled, please enable it to fix the problem") . $nl;
+                  }
               } else {
-                  $output .= t("fix_on_fly is no enabled, please enable it to fix the problem") . $nl;
+                $output .= $res; // output rendered result
               }
-          } else {
-            $output .= $res; // output rendered result
+            }
           }
-      }
     }
 
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
@@ -399,6 +401,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         $output = ltrim($output);
         watchdog('wsod', $output); // log the error
     }
+    $wsod_locked = FALSE;
     return $output;
 }
 

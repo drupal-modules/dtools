@@ -253,6 +253,8 @@ function wsod_strposall($haystack,$needle){
  * 
  */
 function wsod_sess_close() {
-  wsod_check_wsod(TRUE);
+  $is_emergency = (strpos($_SERVER['SCRIPT_FILENAME'], 'emergency.php') !== FALSE);
+  wsod_check_wsod(TRUE, $is_emergency, $is_emergency, $is_emergency);
   return TRUE;
 }
+
