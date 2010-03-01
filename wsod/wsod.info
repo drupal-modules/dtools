@@ -1,6 +1,6 @@
 ; $Id$
 name = WSOD (White Screen of Death)
-description = Detect white screen of death and diagnoze what's the reason
+description = Detect a white screen of death and diagnose its cause
 package = Development
 core = 6.x
 version = VERSION
