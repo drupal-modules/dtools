@@ -613,7 +613,7 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
              */
         }
     } else if (strpos($err_msg, "syntax error") !== FALSE) {
-      $output .= sprintf('Tip: In case of syntax error, check your PHP compatibility with your module (module: %s)' . NL, $module_name);
+      $output .= sprintf('Tip: In case of syntax error, check your PHP compability with your module or disable it (module: %s)' . NL, $module_name);
     } else if (strpos($err_msg, "Maximum execution time") !== FALSE) {
       $output .= 'Tip: You need to increase max_execution_time in your php.ini and please install drupal_tweaks module.' . NL;
     }
