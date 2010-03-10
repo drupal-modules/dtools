@@ -45,6 +45,7 @@ function wsod_validate_theme_hooks($verbose = FALSE, &$output) {
         }
     } else {
         $output .= t("Theme registry is empty!") . $nl;
+        $theme_test = FALSE;
     }
     return $theme_test;
 }

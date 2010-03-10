@@ -11,6 +11,8 @@
  *    Rafal Wieczorek <kenorb@gmail.com>
  */
 
+define('NL', '<br>'); // new line in messages
+
 /**
  * Implementation of hook_boot(). Runs even for cached pages.
  */
@@ -110,7 +112,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       function t($msg, $args = NULL) { return $msg; }
     }
     $output = '';
-    $nl = t('<br>');
+    $nl = NL;
 
     // version request
     if ($_GET['v']) {
@@ -539,6 +541,7 @@ function wsod_fatal_error_checker(&$output, $fix_on_fly = TRUE) {
     if ((version_compare(PHP_VERSION, '5.2.0') === 1) && $error = error_get_last()) {
         switch($error['type']){
             case E_ERROR:
+            case E_PARSE:
             case E_CORE_ERROR:
             case E_COMPILE_ERROR:
             case E_USER_ERROR:
