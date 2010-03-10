@@ -19,28 +19,32 @@
  */ 
 function wsod_validate_theme_hooks($verbose = FALSE, &$output) {
     $hooks = theme_get_registry(); // get list of theme hook
-    $theme_test = true;
+    $theme_test = TRUE;
     $nl = t('<br>');
-    $output .= t("Validating theme hooks...").$nl;
-    foreach ($hooks as $hook_name => $hook) {
-        /* TODO: convert t() to sprintf() if t() is in bootstrap mode */
-        if (isset($hook['path']) && !file_exists($hook['path'])) {
-            $output .= t("ERROR: File or path doesn't exist (path: %path; theme callback: %function)", array('%path' => $hook['path'], '%function' => $hook_name)).$nl;
-            $theme_test = false;
+    $output .= t("Validating theme registry...") . $nl;
+    if (!empty($hooks)) {
+        foreach ($hooks as $hook_name => $hook) {
+            /* TODO: convert t() to sprintf() if t() is in bootstrap mode */
+            if (isset($hook['path']) && !file_exists($hook['path'])) {
+                $output .= sprinf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
+                $theme_test = FALSE;
+            }
+            $filepath = $hook['path'] ? $hook['path'].'/'.$hook['file'] : $hook['file'];
+            if (isset($hook['file']) && !file_exists($filepath)) {
+                $output .= sprinf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
+                $theme_test = FALSE;
+            }
+            if (isset($hook['theme path']) && !file_exists($hook['theme path'])) {
+                $output .= sprinf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['theme path'], $hook_name) . $nl;
+                $theme_test = FALSE;
+            }
+            if (isset($hook['access_callback']) && !function_exists($hook['access_callback'])) {
+                $output .= sprintf("ERROR: Access callback doesn't exist (callback: %s)", $hook['access_callback']) . $nl;
+                $theme_test = FALSE;
+            }
         }
-        $filepath = $hook['path'] ? $hook['path'].'/'.$hook['file'] : $hook['file'];
-        if (isset($hook['file']) && !file_exists($filepath)) {
-            $output .= t("ERROR: File or path doesn't exist (path: %path; theme callback: %function)", array('%path' => $filepath, '%function' => $hook_name)).$nl;
-            $theme_test = false;
-        }
-        if (isset($hook['theme path']) && !file_exists($hook['theme path'])) {
-            $output .= t("ERROR: Theme path doesn't exist (path: %path; theme callback: %function)", array('%path' => $hook['theme path'], '%function' => $hook_name)).$nl;
-            $theme_test = false;
-        }
-        if (isset($hook['access_callback']) && !function_exists($hook['access_callback'])) {
-            $output .= t("ERROR: Access callback doesn't exist (callback: %function)", array('%function' => $hook['access_callback'])).$nl;
-            $theme_error = false;
-        }
+    } else {
+        $output .= t("Theme registry is empty!") . $nl;
     }
     return $theme_test;
 }
