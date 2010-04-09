@@ -117,14 +117,14 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     // version request
     if ($_GET['v']) {
       $output .= t('Version: $Id$') . $nl;
-      $verbose ? print $output : print 'n/a' ;
+      $verbose ? print $output : NULL;
       return;
     }
 
     // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
         $output .= t('Backtrace: ') . wsod_get_backtrace() . $nl . $nl;
-        $verbose ? print $output : print 'n/a' ;
+        $verbose ? print $output : NULL;
         return; // can't continue, if there are some fatal errors
     }
 
@@ -168,7 +168,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
           module_rebuild_cache(); // rebuild paths in system table
           $output .= t("Fixing by enabling $disabled_module core module!").$nl;
         }
-        $verbose ? print $output : print 'n/a' ;
+        $verbose ? print $output : NULL;
         return;
     }
 
@@ -177,7 +177,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!$wsod_exit && module_exists('wsod')) {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
         $output .= t('Backtrace: ') . wsod_get_backtrace().$nl.$nl;
-        $verbose ? print $output : print 'n/a' ;
+        $verbose ? print $output : NULL;
         return;
     } else if (is_string($wsod_exit)) { // check if $wsod_exit contain new destination url
       $output .= t("WSOD: Redirection to: ".drupal_get_destination()).$nl;
@@ -220,7 +220,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         $content_output = ob_get_clean(); // TODO: what if there is some content?
         // CHECK FOR FATAL ERRORS again
         if (wsod_fatal_error_checker($output, $fix_on_fly)) {
-            $verbose ? print $output : print 'n/a' ;
+            $verbose ? print $output : NULL;
             $output = ltrim($output);
             if (!empty($output)) {
               watchdog('wsod', $output); // log the error
@@ -503,6 +503,7 @@ function wsod_check_theme_registry(&$output = NULL, $nl = NL) {
  */
 function wsod_get_backtrace($no_del = 1) {
   $backtrace = debug_backtrace(TRUE);
+  $buffer = '';
   if (is_array($backtrace)) {
     array_shift($backtrace); // remove this function from array
     for ($i = 0; $i < $no_del; $i++) { array_shift($backtrace); }
