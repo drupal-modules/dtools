@@ -26,16 +26,16 @@ function wsod_validate_theme_hooks($verbose = FALSE, &$output) {
         foreach ($hooks as $hook_name => $hook) {
             /* TODO: convert t() to sprintf() if t() is in bootstrap mode */
             if (isset($hook['path']) && !file_exists($hook['path'])) {
-                $output .= sprinf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
+                $output .= sprintf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
                 $theme_test = FALSE;
             }
             $filepath = $hook['path'] ? $hook['path'].'/'.$hook['file'] : $hook['file'];
             if (isset($hook['file']) && !file_exists($filepath)) {
-                $output .= sprinf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
+                $output .= sprintf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
                 $theme_test = FALSE;
             }
             if (isset($hook['theme path']) && !file_exists($hook['theme path'])) {
-                $output .= sprinf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['theme path'], $hook_name) . $nl;
+                $output .= sprintf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['theme path'], $hook_name) . $nl;
                 $theme_test = FALSE;
             }
             if (isset($hook['access_callback']) && !function_exists($hook['access_callback'])) {
