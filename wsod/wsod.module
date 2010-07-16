@@ -588,6 +588,7 @@ function wsod_fatal_error_fix($error, &$output, $fix_on_fly = TRUE) {
              */
         }
     } else if (strpos($err_msg, "Call to undefined function") !== FALSE) {
+/* TODO: Fatal error: Call to undefined function user_access() in ...  */
         if ($fix_on_fly) { // if fix mode, then fix the errors
           wsod_rebuild_system_table(); // rebuild system table
           $output .= 'Rebuild system table.' . NL;
