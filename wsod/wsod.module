@@ -12,6 +12,7 @@
  */
 
 define('WSOD_TICKS', 1);
+define('WSOD_BT_ARG_LIMIT', 100);
 define('NL', "<br>\n"); // new line in messages
 define('WSOD_ID', '$Id$');
 
@@ -412,9 +413,14 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
  * 
  */
 function wsod_last_debug_code() {
+  @apache_setenv('no-gzip', 1);
+  @ini_set('zlib.output_compression', 0);
+  @ini_set('implicit_flush', 1);
+  for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
+  ob_implicit_flush(1);
+
   echo 'Debuging code, please wait...' . NL;
   echo 'Note: When page loading is finished, please check the recent backtrace at the bottom.' . NL;
-  flush();
 
   /* Note: shutdown function doesn't work here ;/ [ register_shutdown_function('print', 'works'); ] */
 
@@ -436,10 +442,7 @@ function wsod_last_debug_code() {
 function wsod_tick($return = FALSE) {
   static $wsod_tick = 0, $wsod_counter = 0;
   if ($wsod_tick++ > WSOD_TICKS) {
-    unregister_tick_function('wsod_tick'); // don't debug wsod function
     echo '#' . $wsod_counter++ . ': ' . wsod_get_backtrace(1, 10) . NL . NL;
-    register_tick_function('wsod_tick'); // activate debugger again
-    flush();
     // global $wsod_debug; $wsod_debug[] = debug_backtrace(TRUE);
   }
 }
@@ -547,10 +550,19 @@ function wsod_get_backtrace($no_del = 1, $tail = 0, $input_backtrace = NULL) {
     (count($backtrace) >= $no_del + 1) ? $backtrace = array_slice($backtrace, 0, (-$no_del - 1), TRUE) : NULL; // remove recent function from backtrace (including current one)
     (count($backtrace) >= $tail) ? $backtrace = array_slice($backtrace, (-$tail), NULL, TRUE) : NULL; // return only last specified number of functions
     foreach ($backtrace as $index => $function) {
-        $function = $function['function'];
-        $line = $backtrace[$index]['line'];
-        $filename = basename($backtrace[$index]['file']);
-        $buffer[] = "$function($filename:$line)";
+        $function_name = $function['function'];
+        $filename = !empty($backtrace[$index]['file']) ? basename($backtrace[$index]['file']) : '?';
+        $line = !empty($backtrace[$index]['line']) ? $backtrace[$index]['line'] : '?';
+        $args = NULL;
+        if (!empty($function['args']) && !is_bool($function['args'])) {
+          $args = is_scalar($function['args']) ? $function['args'] : serialize($function['args']); // serialize arrays and objects
+        } elseif (is_bool($function['args'])) {
+          $args = $function['args'] ? 'TRUE' : 'FALSE';
+        } else {
+          $args = '';
+        }
+        $args = (strlen($args) > WSOD_BT_ARG_LIMIT) ? gettype($function['args']) : gettype($function['args']) . ':' . $args;
+        $buffer[] = "$function_name($args)[$filename:$line]";
     } 
   }
   if (empty($buffer)) {
