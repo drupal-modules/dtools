@@ -5,9 +5,10 @@
  * Menu callback for the settings form.
  */
 function wsod_admin_form() {
+
   $form['wsod'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Diagnostics Tools'),
+    '#title' => t('Diagnostics Tools for WSOD'),
     '#collapsible' => TRUE,
   ); 
 
@@ -19,9 +20,25 @@ function wsod_admin_form() {
 
   $form['wsod']['wsod_live_checking'] = array(
     '#type' => 'checkbox',
-    '#title' => t('WSOD live checking enabled.'),
-    '#description' => t('Select if you want to monitor and log all detected WSOD\'s. Loading performance of your website could be decreased.'),
-    '#default_value' => variable_get('wsod_live_checking', 0),
+    '#title' => t('Check for WSOD on every page load (only for debugging purpose).'),
+    '#description' => t('WSOD is checked on every page load. Loading performance of your website could be decreased!'),
+    '#default_value' => variable_get('wsod_live_checking', FALSE),
+  );
+
+  $form['wsod']['wsod_checking_on_post'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Check for WSOD on submitted forms as well.'),
+    '#description' => t('Activate WSOD checking on submitted forms (by default WSOD are checked only for non-submitted forms).'),
+    '#default_value' => variable_get('wsod_checking_on_post', FALSE),
+    '#disabled' => !variable_get('wsod_live_checking', FALSE),
+  );
+
+  $form['wsod']['wsod_verbose_mode'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Activate verbose mode'),
+    '#description' => t('Activate verbose mode on WSOD pages (debug messages are sent directly to website output). Please use it only for debug purposes, because it could break your theme!'),
+    '#default_value' => variable_get('wsod_verbose_mode', FALSE),
+    '#disabled' => !variable_get('wsod_live_checking', FALSE),
   );
 
   //$form['#validate'] = array('personalized_settings_admin_form_validate');
