@@ -292,6 +292,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   $output .= t('Theme registry has been cleared from cache!').$nl;
                 }
             } else if (empty($title)) { // 
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
                 $output .= $page_output; // if nothing to show, output standard page not found
             }
         break;
@@ -308,6 +309,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   $output .= t('Theme registry has been cleared from cache!').$nl;
                 }
             } else {
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
                     /* TODO: don't print it twice */
@@ -328,6 +330,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                   $output .= t('Theme registry has been cleared from cache!').$nl;
                 }
             } else {
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
                     /* TODO: don't print it twice */
@@ -357,6 +360,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                     //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => "$return")).$nl);
                 }
             } else {
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
                 $output .= $page_output; // if nothing to show, output standard page not found
             }
       }
