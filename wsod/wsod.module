@@ -541,7 +541,7 @@ function wsod_check_theme_registry(&$output = NULL, $nl = NL) {
 /**
  * Return backtrace
  */
-function wsod_get_backtrace($no_del = 1, $tail = 0, $input_backtrace = NULL) {
+function wsod_get_backtrace($no_del = 1, $tail = 0, $in_array = FALSE, $input_backtrace = NULL) {
   $backtrace = $input_backtrace ? $input_backtrace : debug_backtrace(TRUE);
   $buffer = array();
   if (is_array($backtrace)) {
@@ -569,7 +569,7 @@ function wsod_get_backtrace($no_del = 1, $tail = 0, $input_backtrace = NULL) {
     $buffer = 'n/a';
   } else if ($tail && count($buffer) > $tail) {
   }
-  return implode(';', $buffer);
+  return $in_array ? $buffer : implode(';', $buffer);
 }
 
 /**
