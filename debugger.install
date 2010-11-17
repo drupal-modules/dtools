@@ -1,0 +1,174 @@
+<?php
+
+/**
+ * @file
+ *   Installation file
+ *
+ * @version
+ *   $Id$
+ *
+ * @developers
+ *   Rafal Wieczorek <kenorb@gmail.com>
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function debugger_schema() {
+
+  $schema['debugger_functions'] = array(
+    'description' => t('Stores functions for Drupal debugger.'),
+    'fields' => array(
+      'fncid' => array(
+        'description' => 'The primary identifier for a file.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'name' => array(
+        'description' => 'A function name.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'fid' => array(
+        'description' => 'File ID where this function exists.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'line' => array(
+        'description' => 'The line of the file.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'args' => array(
+        'description' => 'Serialized function arguments.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'description' => array(
+        'description' => 'A description of that function.',
+        'type' => 'text',
+        'not null' => TRUE),
+    ),
+    'primary key' => array('fncid'),
+  );
+
+  $schema['debugger_files'] = array(
+    'description' => t('Stores filenames for Drupal debugger.'),
+    'fields' => array(
+      'fid' => array(
+        'description' => 'The primary identifier for a file.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'filepath' => array(
+        'description' => 'Path of the file relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'module' => array(
+        'description' => 'The name of the module which file belongs to (e.g. node, drupal for core).',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+    ),
+    'primary key' => array('fid'),
+  );
+
+  $schema['debugger_traces'] = array(
+    'description' => t('Stores straces for Drupal debugger.'),
+    'fields' => array(
+/*
+      'unique_call' => array(
+        'description' => 'Primary Key contains: Filepath, line, pid',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+*/
+      'id' => array(
+        'description' => 'The primary identifier for a trace.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'fncid' => array(
+        'description' => 'The primary identifier for a file.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'fid' => array(
+        'description' => 'The file item.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'pid' => array(
+        'description' => 'The trace item parent.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'time' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'The time in miliseconds of that trace.',
+      ),
+      'path' => array(
+        'description' => 'the Drupal page path this entry describes.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'args' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'A serialized array of name value pairs that are related to arguments passed to the function.'),
+      'post' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'A serialized array of POST value pairs that are related to arguments passwd by posting the values by user.'),
+      'uid' => array(
+        'description' => 'The {users}.uid corresponding to a session, or 0 for anonymous user.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'updated' => array(
+        'description' => 'The Unix timestamp when the trace was last updated.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0),
+    ),
+    'primary key' => array('id'),
+    'unique keys' => array(
+      'fncid_fid_pid_uid' => array('fncid', 'fid', 'pid', 'uid'),
+    ),
+    'indexes' =>
+      array(
+        'fncid' => array('fncid'),
+      ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function debugger_install() {
+  drupal_install_schema('debugger');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function debugger_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name LIKE 'debugger_%%'");
+  drupal_uninstall_schema('debugger');
+}
+

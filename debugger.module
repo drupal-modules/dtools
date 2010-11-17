@@ -1,0 +1,66 @@
+<?php
+
+/**
+ * @file
+ *   Drupal debugger analysing the performance issues on the website
+ *
+ * @version
+ *   $Id$
+ *
+ * @developers
+ *   Rafal Wieczorek <kenorb@gmail.com>
+ */
+
+/**
+ * Implementation of hook_boot().
+ */
+function debugger_boot() {
+  if (variable_get('debugger_enabled', FALSE)) {
+    // register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
+    declare(ticks = 1);
+    register_tick_function('debugger_tick');
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function debugger_menu() {
+  $items['admin/settings/debugger'] = array(
+    'title' => 'Debugger',
+    'description' => t('Manage Drupal debugger'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('debugger_admin_form'),
+    'access arguments' => array('administer debugger'),
+    'file' => 'debugger.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function debugger_perm() {
+  return array('administer debugger');
+}
+
+/**
+ * Implementation of hook_exit().
+ */
+function debugger_exit() {
+  if (variable_get('debugger_enabled', FALSE)) {
+    unregister_tick_function('debugger_tick');
+    module_load_include('inc', 'debugger'); // include additional functions
+    debugger_savetrace(); // save backtrace into db
+  }
+}
+
+/** 
+ * Implementation of register_tick_function callback
+ */ 
+function debugger_tick() {
+  static $dcounter = 0;
+  global $debugger_trace;
+  $debugger_trace[time()]  = debug_backtrace(TRUE);
+}   
+
