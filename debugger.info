@@ -2,6 +2,6 @@
 name = Drupal debugger
 description = Drupal debugger analysing the performance issues on the website
 core = 6.x
-package = Drupal Tweaks
+package = Devel
 version = VERSION
 
