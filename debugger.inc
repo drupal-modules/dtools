@@ -12,96 +12,76 @@
  */
 
 define('DEBUG', TRUE);
+define('DBT_DEEP', 3);
 
 /**
  * Save trace data into db
  */
 function debugger_savetrace() {
   $basedir = getcwd();
-  $pid = 0;
-  $unixtime_last = NULL;
-  $post = serialize($_POST);
-  $uri = $_GET['q'];
+  $pfncid = 0; // reset function parent id
+  $total_time = 0;
+  $total_mem = 0;
+  $slow_fncid = array();
+  $mem_fncid = array();
 // db_query("TRUNCATE TABLE {debugger_files}");
 // db_query("TRUNCATE TABLE {debugger_traces}");
 // db_query("TRUNCATE TABLE {debugger_functions}");
-  $backtraces = debugger_tick(TRUE);
+// db_query("TRUNCATE TABLE {debugger_requests}");
+  /* initialize the current HTTP request */
+  $post = serialize($_POST);
+  $path = $_GET['q'];
+  $rpath = menu_get_item();
+  // $query = // TODO: What here? All after '?'?
+// xdebug_start_trace();
+  $request_id = debugger_api_db_register_request($path, $rpath, $query, $post);
+  list($backtraces, $num_ticks) = debugger_api_register_backtrace();
+// var_dump($backtraces); exit;
   foreach ($backtraces as $c_time_mem => $backtrace) {
-    list($counter, $time, $memory) = explode(':', $c_time_mem);
+    list($counter, $time, $mem_delta) = explode(':', $c_time_mem);
+    $total_time += $time;
+    $total_mem += $mem_delta;
     /* CALCULATE THE TIME */
     // $time = (float)($microtime_last ? $microtime-$microtime_last : 0);
     // $microtime_last = (float)$microtime;
+    $deep = 0;
+    $ptid = 0; // reset trace parent id
     foreach ($backtrace as $key => $call_obj) {
+      if ($call_obj['function'] == 'debugger_tick') {
+        continue; // ignore our tick function
+      }
       /* INIT VARIABLES */
+      /* REGISTER FILE */
       $file = $call_obj['file'] ? debugger_get_relative_path($call_obj['file']) : '(unknown)';
-      $module = debugger_module_via_file($file);
+      $fid = debugger_api_db_register_file($file); // find file id in db, if not - create one
+      /* REGISTER FUNCTION */
       $function = $call_obj['function'];
-      $line = $call_obj['line'];
       $args = serialize($call_obj['args']);
-      /* FIND FILE RECORD IN DB, IF NOT CREATE ONE */
-      if (!($fid = debugger_db_get_fid($file))) { // if not found, register new file
-        empty($file) ? watchdog('debugger', 'Empty %value variable: %data', array('%value' => 'file', '%data' => print_r($call_obj, TRUE)), 'error') : NULL;
-        debugger_db_register_file($file);
-        $fid = debugger_db_get_fid($file); // and get the fid
-      }
-      /* FIND FUNCTION RECORD IN DB, IF NOT CREATE ONE */
-      if (!($fncid = debugger_db_get_fcnid_via_name($function))) {
-        empty($function) ? watchdog('debugger', 'Empty %value variable: %data', array('%value' => 'function', '%data' => print_r($call_obj, TRUE)), 'error') : NULL;
-        debugger_db_register_function($function, $fid, $line, count($args), '');
-        $fncid = debugger_db_get_fcnid_via_name($function);
-      }
+      $fncid = debugger_api_db_register_function($function, $fid, $call_obj['line'], count($args), ''); // find function id in db, if not - create one
       /* SAVE TRACE ITEM */
-      debugger_db_register_trace($fid, $fncid, $pid, $time, $time_delta, $uri, 0, $args, $post);
+      $tid = debugger_api_db_register_trace($ptid, $fncid, $pfncid, $fid, $request_id, ($ptid == 0 ? $time : 0), ($ptid == 0 ? $mem_delta : 0), $args, $deep);
+      $ptid = $tid; // save as parent for the next item
+      if ($deep++ > DBT_DEEP) {
+        break; // break if we are too deep, probably we have the rest details
+      }
+    } // end: foreach
+    /* CHECK PERFORMANCE */
+    $module = debugger_api_module_via_file();
+    if ($mem_delta > current($mem_fncid)) { // check how much memory using this line
+      $mem_fncid[$fncid] = $mem_delta; // 
     }
+    if ($time > current($slow_fncid)) {
+      $slow_fncid[$fncid] = $time;
+    }
+    $pfncid = $fncid; // save as parent for the next item
   }
-}
-
-/**
- * Register new trace item
- */
-function debugger_db_register_trace($fid, $fncid, $pid, $time, $time_delta, $uri, $unixtime, $args = '', $post = '') {
-  global $user;
-  db_query("REPLACE INTO {debugger_traces}
-            SET
-                `fid` = %d, 
-                `fncid` = %d, 
-                `pid` = %d, 
-                `time` = %f, 
-                `path` = '%s', 
-                `args` = '%s', 
-                `post` = '%s',
-                `uid` = %d, 
-                `updated` = %d
-  ", $fid, $fncid, $pid, $time, $uri, $args, $post, $user->uid, $unixtime);
-                // `time_delta` = %4.4f, 
-}
-
-/**
- * Get function ID from database via pathfile
- */
-function debugger_db_get_fcnid_via_name($name) {
-  return db_result(db_query("SELECT fncid FROM {debugger_functions} WHERE name = '%s'", $name));
-}
-
-/**
- * Register new function into database
- */
-function debugger_db_register_function($function, $fid, $line, $args = '', $desc = '') {
-  return db_query("INSERT INTO {debugger_functions} SET `name` = '%s', `fid` = '%s', `line` = '%d', `args` = '%s', `description` = '%s'", $function, $fid, $line, $args, $desc);
-}
-
-/**
- * Get file ID from database via pathfile
- */
-function debugger_db_get_fid($file) {
-  return db_result(db_query("SELECT fid FROM {debugger_files} WHERE filepath = '%s'", $file));
-}
-
-/**
- * Register new filepath into database
- */
-function debugger_db_register_file($file) {
-  return db_query("INSERT INTO {debugger_files} SET `filepath` = '%s', `module` = '%s'", $file, debugger_module_via_file($file));
+  // TODO: $rpath = get menu callback via path (menu_router)
+  // TODO: $fncid = get responsible function from menu callback (menu_router)
+  // TODO: $slow_fncid = get responsible function from menu callback (menu_router)
+// TODO: $query = '/* '. $name .' : '. $bt[2]['function'] .' */ '. $query; - check which function run which query and save into debugger_db_queries table
+  global $queries;
+  $num_sql = count($queries);
+  debugger_db_update_request($request_id, $fid, $fncid, key($mem_fncid), key($slow_fncid), $slow_qid, $total_time, $total_memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices);
 }
 
 /**
@@ -110,17 +90,4 @@ function debugger_db_register_file($file) {
 function debugger_get_relative_path($filepath) {
   return substr($filepath, strlen(getcwd())+1);
 }
-/**
- * Detect module name by file
- */
-function debugger_module_via_file($file) {
-  $module = '(unknown)';
-  if (!strpos($file, '/') !== FALSE || strpos($file, 'includes/') === 0) {
-    $module = 'Drupal';
-  } else if (($extension = end(explode('.', ($filename = basename($file))))) == 'module') { // check for .module extension and get the name
-      $module = substr($filename, 0, -1-strlen($extension));
-  } else {
-    $module = '(todo)';
-  } // end: else
-  return $module;
-}
+

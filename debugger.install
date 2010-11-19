@@ -38,6 +38,38 @@ function debugger_schema() {
         'length' => 255,
         'not null' => TRUE,
         'default' => ''),
+      'rpath' => array(
+        'description' => 'Router menu page path of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'fid' => array(
+        'description' => 'The file identifier of menu callback.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'fncid' => array(
+        'description' => 'The function identifier of menu callback.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'mem_fncid' => array(
+        'description' => 'Function which uses the most memory for that request.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'slow_fncid' => array(
+        'description' => 'The slowest function.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'slow_qid' => array(
+        'description' => 'Query ID of the slowest db query of that request.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
       'query' => array(
         'description' => 'URL page query of this entry.',
         'type' => 'varchar',
@@ -84,6 +116,12 @@ function debugger_schema() {
         'description' => 'Number of PHP notices of that request.',
         'type' => 'int',
         'not null' => TRUE),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that request.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
     ),
     'primary key' => array('rid'),
     'indexes' =>
@@ -127,8 +165,46 @@ function debugger_schema() {
         'description' => 'A description of that function.',
         'type' => 'text',
         'not null' => TRUE),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that function.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
     ),
     'primary key' => array('fncid'),
+  );
+
+  $schema['debugger_db_queries'] = array(
+    'description' => t('Stores database queries for Drupal debugger.'),
+    'fields' => array(
+      'qid' => array(
+        'description' => 'The primary identifier of the query.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'fncid' => array(
+        'description' => 'The function identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'time' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'The current time in miliseconds of that query.',
+      'num' => array(
+        'description' => 'Average number of this sql query per request where is used.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that query.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      ),
+    ),
+    'primary key' => array('qid'),
   );
 
   $schema['debugger_files'] = array(
@@ -151,6 +227,12 @@ function debugger_schema() {
         'length' => 255,
         'not null' => TRUE,
         'default' => ''),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that file.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
     ),
     'primary key' => array('fid'),
   );
@@ -166,11 +248,17 @@ function debugger_schema() {
         'not null' => TRUE,
         'default' => ''),
 */
-      'id' => array(
+      'tid' => array(
         'description' => 'The primary identifier for a trace.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE),
+      'ptid' => array(
+        'description' => 'The parent trace ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
       'fncid' => array(
         'description' => 'The function identifier.',
         'type' => 'int',
@@ -202,17 +290,19 @@ function debugger_schema() {
         'not null' => TRUE,
         'default' => 0),
 */
+/*
       'time' => array(
         'type' => 'float',
         'not null' => FALSE,
         'description' => 'The current time in miliseconds of that trace.',
       ),
+*/
       'time_delta' => array(
         'type' => 'float',
         'not null' => FALSE,
         'description' => 'Delta of time in miliseconds of that trace.',
       ),
-      'delta' => array(
+      'mem_delta' => array(
         'type' => 'int',
         'not null' => FALSE,
         'description' => 'The memory used in kilobytes',
@@ -222,13 +312,14 @@ function debugger_schema() {
         'not null' => FALSE,
         'size' => 'big',
         'description' => 'A serialized array of name value pairs that are related to arguments passed to the function.'),
-      'updated' => array(
-        'description' => 'The Unix timestamp when the trace was last updated.',
-        'type' => 'int',
+      'options' => array(
+        'description' => 'Serialized additional custom options for that trace.',
+        'type' => 'varchar',
+        'length' => 255,
         'not null' => TRUE,
-        'default' => 0),
+        'default' => ''),
     ),
-    'primary key' => array('id'),
+    'primary key' => array('tid'),
     'unique keys' => array(
       'fncid_pfncid' => array('fncid', 'pfncid'),
     ),

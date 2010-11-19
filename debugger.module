@@ -11,80 +11,11 @@
  *   Rafal Wieczorek <kenorb@gmail.com>
  */
 
+require_once 'debugger.api.inc'; // load API functions
 register_tick_function('debugger_tick');
 
 define('D_MIN_TIMER', 0.01);
-
-// apd_set_pprof_trace();
-/*
-  WE NEED TO FAKE THE REST OF THE CODE FROM includes/bootstrap.inc
-  to execute `ticks` directive for a block of code,
-  otherwise we can't debug the code included by parent, sorry;(
-
-  Note: The declare construct can also be used in the global scope, affecting all code following it
-  (however if the file with declare was included then it does not affect the parent file). 
-  See: http://php.net/manual/en/control-structures.declare.php
-*/
-/*
-declare(ticks = 1);
-bootstrap_invoke_all('boot');
-
-// If there is a cached page, display it.
-if (is_object($cache)) {
-  header('X-Drupal-Cache: HIT');
-  drupal_page_cache_header($cache);
-  // If the skipping of the bootstrap hooks is not enforced, call hook_exit.
-  if ($cache_mode != CACHE_AGGRESSIVE) {
-    bootstrap_invoke_all('exit');
-  }
-  // We are done.
-  exit;
-}
-
-if (!$cache && drupal_page_is_cacheable() && $cache_mode != CACHE_EXTERNAL) {
-  header('X-Drupal-Cache: MISS');
-}
-
-// If using an external cache and the page is cacheable, set headers.
-if ($cache_mode == CACHE_EXTERNAL && drupal_page_is_cacheable()) {
-  drupal_page_cache_header_external();
-}
-
-// Prepare for non-cached page workflow.
-if (!drupal_is_cli()) {
-  ob_start();
-  drupal_page_header();
-}
-
-drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL); // execute FULL bootstrap mode
-*/
-
-/* Doesn't work properly
-$return = menu_execute_active_handler();
-
-// Menu status constants are integers; page content is a string.
-if (is_int($return)) {
-  switch ($return) {
-    case MENU_NOT_FOUND:
-      drupal_not_found();
-      break;
-    case MENU_ACCESS_DENIED:
-      drupal_access_denied();
-      break;
-    case MENU_SITE_OFFLINE:
-      drupal_site_offline();
-      break;
-  }
-}
-elseif (isset($return)) {
-  // Print any value (including an empty string) except NULL or undefined:
-  print theme('page', $return);
-}
-
-drupal_page_footer();
-exit;
-*/
-
+define('D_SAVE_COUNTER', 100);
 
 /**
  * Implementation of hook_boot().
@@ -92,8 +23,8 @@ exit;
 function debugger_boot() {
   if (debugger_enabled()) {
     register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
-    //xdebug_start_trace();
-    // xdebug_stop_trace();
+    variable_set('dev_query', 1); // Enable query logging // TODO: convert to configurable setting?
+    debugger_check_curr_path();
   }
 }
 
@@ -135,11 +66,6 @@ function debugger_perm() {
 function debugger_exit() {
   global $debugger_exit;
   $debugger_exit = TRUE; // mark the exit correctly
-  if (debugger_enabled()) {
-    module_load_include('inc', 'debugger'); // include additional functions
-    debugger_savetrace(); // save backtrace into db
-    unregister_tick_function('debugger_tick');
-  }
 }
 
 /** 
@@ -148,7 +74,7 @@ function debugger_exit() {
  */ 
 function debugger_shutdown() {
   global $debugger_exit;
-  if (!$debugger_exit) {
+  if (!$debugger_exit) { // If hook_exit wasn't executed, check if we are out of memory?
     $ini_size = ini_get("memory_limit");
     $curr_size = memory_get_usage();
 
@@ -159,7 +85,38 @@ function debugger_shutdown() {
       print 'Fatal Error: Please increase your PHP memory limit in your php.ini!';
       db_query("UPDATE system SET `status` = 0 WHERE name = 'debugger'"); // FIXME: do we have connection enabled on shutdown?
       print 'After that please re-enable the module!';
+      exit;
     }
+  }
+  if (debugger_enabled()) {
+    variable_set('dev_query', 0); // TODO: convert to configurable setting?
+    debugger_check_curr_path(); // Fix the Apache bug when current directory is changed on shutdown
+    module_load_include('inc', 'debugger'); // include additional functions
+    debugger_savetrace(); // save backtrace into db
+    unregister_tick_function('debugger_tick');
+  }
+}
+
+/** 
+ * Helper function to check if debugger should be enabled on the current page
+ */
+function debugger_enabled() {
+  $path = explode('/', $_GET['q']);
+  $res = variable_get('debugger_enabled', FALSE) && (!($path[0] == 'admin') || variable_get('debugger_enabled_admin', FALSE));
+  return $res;
+}
+
+/**
+ * Check for Drupal root changes and fix it
+ * Note: Working directory of the script can be changed on registered shutdown function under some web servers, e.g. Apache.
+ */
+function debugger_check_curr_path() {
+  global $debugger_root_path;
+  if (!$debugger_root_path) {
+    $debugger_root_path = getcwd(); // Save current Drupal path, in case if we lose it
+  } else {
+    // Note: Working directory of the script can be changed on shutdown under some web servers, e.g. Apache.
+    $debugger_root_path <> getcwd() ? chdir($debugger_root_path) : NULL; // change it back if change has been detected
   }
 }
 
@@ -171,26 +128,20 @@ function debugger_shutdown() {
  * Note: memory_get_peak_usage() - PHP 5.2.1  Compiling with --enable-memory-limit is no longer required for this function to exist. , PHP 5.2.0  real_usage was added.
  */ 
 function debugger_tick($dump = FALSE) {
-  static $dcounter = 0;
-  global $debugger_trace, $last_timer;
-  $curr_timer = microtime();
+  static $tick_counter = 0;
+  global $debugger_trace, $last_timer, $last_memory;
+  $curr_timer = microtime(TRUE);
+  $curr_memory = memory_get_usage();
   $time = (float)$curr_timer-$last_timer;
-  $last_timer = $curr_timer;
+  $memory = (float)$curr_memory-$last_memory;
   if ($time > (float)D_MIN_TIMER) {
-      $debugger_trace[$dcounter . ':' . $time . ':' . memory_get_usage()]  = debug_backtrace(TRUE);
+    debugger_api_register_backtrace(debug_backtrace(TRUE), $time, $memory, $tick_counter, 2);
+    $last_timer = $curr_timer;
+    $last_memory = $curr_memory;
   }
-  $dcounter++; 
+  $tick_counter++; 
   if ($dump) {
-    return $debugger_trace;
+    return array($debugger_trace, $tick_counter);
   }
-}
-
-/** 
- * Helper function to check if debugger should be enabled on the current page
- */
-function debugger_enabled() {
-  $path = explode('/', $_GET['q']);
-  $res = variable_get('debugger_enabled', FALSE) && (!$path[0] == 'admin' || variable_get('debugger_enabled_admin', FALSE));
-  return $res;
 }
 
