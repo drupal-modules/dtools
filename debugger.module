@@ -11,15 +11,100 @@
  *   Rafal Wieczorek <kenorb@gmail.com>
  */
 
+register_tick_function('debugger_tick');
+
+define('D_MIN_TIMER', 0.01);
+
+// apd_set_pprof_trace();
+/*
+  WE NEED TO FAKE THE REST OF THE CODE FROM includes/bootstrap.inc
+  to execute `ticks` directive for a block of code,
+  otherwise we can't debug the code included by parent, sorry;(
+
+  Note: The declare construct can also be used in the global scope, affecting all code following it
+  (however if the file with declare was included then it does not affect the parent file). 
+  See: http://php.net/manual/en/control-structures.declare.php
+*/
+/*
+declare(ticks = 1);
+bootstrap_invoke_all('boot');
+
+// If there is a cached page, display it.
+if (is_object($cache)) {
+  header('X-Drupal-Cache: HIT');
+  drupal_page_cache_header($cache);
+  // If the skipping of the bootstrap hooks is not enforced, call hook_exit.
+  if ($cache_mode != CACHE_AGGRESSIVE) {
+    bootstrap_invoke_all('exit');
+  }
+  // We are done.
+  exit;
+}
+
+if (!$cache && drupal_page_is_cacheable() && $cache_mode != CACHE_EXTERNAL) {
+  header('X-Drupal-Cache: MISS');
+}
+
+// If using an external cache and the page is cacheable, set headers.
+if ($cache_mode == CACHE_EXTERNAL && drupal_page_is_cacheable()) {
+  drupal_page_cache_header_external();
+}
+
+// Prepare for non-cached page workflow.
+if (!drupal_is_cli()) {
+  ob_start();
+  drupal_page_header();
+}
+
+drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL); // execute FULL bootstrap mode
+*/
+
+/* Doesn't work properly
+$return = menu_execute_active_handler();
+
+// Menu status constants are integers; page content is a string.
+if (is_int($return)) {
+  switch ($return) {
+    case MENU_NOT_FOUND:
+      drupal_not_found();
+      break;
+    case MENU_ACCESS_DENIED:
+      drupal_access_denied();
+      break;
+    case MENU_SITE_OFFLINE:
+      drupal_site_offline();
+      break;
+  }
+}
+elseif (isset($return)) {
+  // Print any value (including an empty string) except NULL or undefined:
+  print theme('page', $return);
+}
+
+drupal_page_footer();
+exit;
+*/
+
+
 /**
  * Implementation of hook_boot().
  */
 function debugger_boot() {
-  if (variable_get('debugger_enabled', FALSE)) {
-    // register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
-    declare(ticks = 1);
-    register_tick_function('debugger_tick');
+  if (debugger_enabled()) {
+    register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
+    //xdebug_start_trace();
+    // xdebug_stop_trace();
   }
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function debugger_init() {
+/* Manually install again
+    module_load_include('install', 'debugger');
+    debugger_install();
+*/
 }
 
 /**
@@ -48,19 +133,64 @@ function debugger_perm() {
  * Implementation of hook_exit().
  */
 function debugger_exit() {
-  if (variable_get('debugger_enabled', FALSE)) {
-    unregister_tick_function('debugger_tick');
+  global $debugger_exit;
+  $debugger_exit = TRUE; // mark the exit correctly
+  if (debugger_enabled()) {
     module_load_include('inc', 'debugger'); // include additional functions
     debugger_savetrace(); // save backtrace into db
+    unregister_tick_function('debugger_tick');
   }
 }
 
 /** 
- * Implementation of register_tick_function callback
+ * Implementation of register_shutdown_function PHP callback
+ *
  */ 
-function debugger_tick() {
+function debugger_shutdown() {
+  global $debugger_exit;
+  if (!$debugger_exit) {
+    $ini_size = ini_get("memory_limit");
+    $curr_size = memory_get_usage();
+
+    /* format size */
+    $units = array('B', 'K', 'M', 'G', 'T');
+    for ($i = 0; $curr_size >= 1024 && $i < 4; $i++) $curr_size /= 1024;
+    if (round($curr_size).$units[$i] == $ini_size) { // FIXME: FIX for 1G and more
+      print 'Fatal Error: Please increase your PHP memory limit in your php.ini!';
+      db_query("UPDATE system SET `status` = 0 WHERE name = 'debugger'"); // FIXME: do we have connection enabled on shutdown?
+      print 'After that please re-enable the module!';
+    }
+  }
+}
+
+/** 
+ * Implementation of register_tick_function PHP callback
+ *
+ * Note: register_tick_function() should not be used with threaded web server modules with PHP 5.2 or lower.
+ * Note: microtime() - PHP 5.0.0  The get_as_float parameter was added.
+ * Note: memory_get_peak_usage() - PHP 5.2.1  Compiling with --enable-memory-limit is no longer required for this function to exist. , PHP 5.2.0  real_usage was added.
+ */ 
+function debugger_tick($dump = FALSE) {
   static $dcounter = 0;
-  global $debugger_trace;
-  $debugger_trace[time()]  = debug_backtrace(TRUE);
-}   
+  global $debugger_trace, $last_timer;
+  $curr_timer = microtime();
+  $time = (float)$curr_timer-$last_timer;
+  $last_timer = $curr_timer;
+  if ($time > (float)D_MIN_TIMER) {
+      $debugger_trace[$dcounter . ':' . $time . ':' . memory_get_usage()]  = debug_backtrace(TRUE);
+  }
+  $dcounter++; 
+  if ($dump) {
+    return $debugger_trace;
+  }
+}
+
+/** 
+ * Helper function to check if debugger should be enabled on the current page
+ */
+function debugger_enabled() {
+  $path = explode('/', $_GET['q']);
+  $res = variable_get('debugger_enabled', FALSE) && (!$path[0] == 'admin' || variable_get('debugger_enabled_admin', FALSE));
+  return $res;
+}
 

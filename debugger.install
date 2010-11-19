@@ -16,6 +16,82 @@
  */
 function debugger_schema() {
 
+  $schema['debugger_requests'] = array(
+    'description' => t('Stores HTTP requests for Drupal debugger.'),
+    'fields' => array(
+      'rid' => array(
+        'description' => 'The primary identifier for a request.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+/* Do we need this?
+      'host' => array(
+        'description' => 'URL host of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+*/
+      'path' => array(
+        'description' => 'URL page path of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'query' => array(
+        'description' => 'URL page query of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'post' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'A serialized array of POST value pairs that are related to arguments passwd by posting the values by user.'),
+      'uid' => array(
+        'description' => 'The {users}.uid corresponding to a session, or 0 for anonymous user.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'time' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'The total time in miliseconds of that request.',
+      ),
+      'memory' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'The memory used in kilobytes of that request.',
+      ),
+      'num_sql' => array(
+        'description' => 'Number of sql queries of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_ticks' => array(
+        'description' => 'Number of PHP ticks executed in that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_err' => array(
+        'description' => 'Number of PHP errors of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_warn' => array(
+        'description' => 'Number of PHP warnings of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_notices' => array(
+        'description' => 'Number of PHP notices of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+    ),
+    'primary key' => array('rid'),
+    'indexes' =>
+      array(
+        'path' => array('path'),
+      ),
+  );
+
   $schema['debugger_functions'] = array(
     'description' => t('Stores functions for Drupal debugger.'),
     'fields' => array(
@@ -96,48 +172,56 @@ function debugger_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE),
       'fncid' => array(
-        'description' => 'The primary identifier for a file.',
+        'description' => 'The function identifier.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE),
-      'fid' => array(
-        'description' => 'The file item.',
+      'pfncid' => array(
+        'description' => 'The parent function ID which called this function.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0),
+      'fid' => array(
+        'description' => 'The file identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'rid' => array(
+        'description' => 'The request identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+/*
       'pid' => array(
         'description' => 'The trace item parent.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0),
+*/
       'time' => array(
         'type' => 'float',
         'not null' => FALSE,
-        'description' => 'The time in miliseconds of that trace.',
+        'description' => 'The current time in miliseconds of that trace.',
       ),
-      'path' => array(
-        'description' => 'the Drupal page path this entry describes.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => ''),
+      'time_delta' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'Delta of time in miliseconds of that trace.',
+      ),
+      'delta' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'The memory used in kilobytes',
+      ),
       'args' => array(
         'type' => 'text',
         'not null' => FALSE,
         'size' => 'big',
         'description' => 'A serialized array of name value pairs that are related to arguments passed to the function.'),
-      'post' => array(
-        'type' => 'text',
-        'not null' => FALSE,
-        'size' => 'big',
-        'description' => 'A serialized array of POST value pairs that are related to arguments passwd by posting the values by user.'),
-      'uid' => array(
-        'description' => 'The {users}.uid corresponding to a session, or 0 for anonymous user.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE),
       'updated' => array(
         'description' => 'The Unix timestamp when the trace was last updated.',
         'type' => 'int',
@@ -146,11 +230,14 @@ function debugger_schema() {
     ),
     'primary key' => array('id'),
     'unique keys' => array(
-      'fncid_fid_pid_uid' => array('fncid', 'fid', 'pid', 'uid'),
+      'fncid_pfncid' => array('fncid', 'pfncid'),
     ),
     'indexes' =>
       array(
         'fncid' => array('fncid'),
+        'pfncid' => array('pfncid'),
+        'fid' => array('fid'),
+        'rid' => array('rid'),
       ),
   );
 

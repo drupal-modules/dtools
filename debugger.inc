@@ -17,55 +17,77 @@ define('DEBUG', TRUE);
  * Save trace data into db
  */
 function debugger_savetrace() {
-  global $debugger_trace, $user;
+  $basedir = getcwd();
   $pid = 0;
   $unixtime_last = NULL;
-  foreach ($debugger_trace as $unixtime => $backtrace) {
-    $post = serialize($_POST);
-    $time = $unixtime_last ? $unixtime-$unixtime_last : 0;
+  $post = serialize($_POST);
+  $uri = $_GET['q'];
+// db_query("TRUNCATE TABLE {debugger_files}");
+// db_query("TRUNCATE TABLE {debugger_traces}");
+// db_query("TRUNCATE TABLE {debugger_functions}");
+  $backtraces = debugger_tick(TRUE);
+  foreach ($backtraces as $c_time_mem => $backtrace) {
+    list($counter, $time, $memory) = explode(':', $c_time_mem);
+    /* CALCULATE THE TIME */
+    // $time = (float)($microtime_last ? $microtime-$microtime_last : 0);
+    // $microtime_last = (float)$microtime;
     foreach ($backtrace as $key => $call_obj) {
-      $file = $call_obj['file'] ? $call_obj['file'] : '(unknown)';
+      /* INIT VARIABLES */
+      $file = $call_obj['file'] ? debugger_get_relative_path($call_obj['file']) : '(unknown)';
+      $module = debugger_module_via_file($file);
       $function = $call_obj['function'];
-      $args = $call_obj['args'];
-      if (!$fid = debugger_db_get_fid($file) || debugger_db_register_file($file)) { // if not found, register new file
+      $line = $call_obj['line'];
+      $args = serialize($call_obj['args']);
+      /* FIND FILE RECORD IN DB, IF NOT CREATE ONE */
+      if (!($fid = debugger_db_get_fid($file))) { // if not found, register new file
         empty($file) ? watchdog('debugger', 'Empty %value variable: %data', array('%value' => 'file', '%data' => print_r($call_obj, TRUE)), 'error') : NULL;
+        debugger_db_register_file($file);
         $fid = debugger_db_get_fid($file); // and get the fid
       }
-      if ($fid && (!$fncid = debugger_db_get_fcnid_via_name($function) || debugger_db_register_function($function, $fid, $line, NULL, NULL))) {
+      /* FIND FUNCTION RECORD IN DB, IF NOT CREATE ONE */
+      if (!($fncid = debugger_db_get_fcnid_via_name($function))) {
         empty($function) ? watchdog('debugger', 'Empty %value variable: %data', array('%value' => 'function', '%data' => print_r($call_obj, TRUE)), 'error') : NULL;
+        debugger_db_register_function($function, $fid, $line, count($args), '');
         $fncid = debugger_db_get_fcnid_via_name($function);
       }
-      if ($fid && $fncid) {
-        db_query("REPLACE INTO {debugger_traces}
-                  SET
-                      `fid` = %d, 
-                      `fncid` = %d, 
-                      `pid` = %d, 
-                      `time` = %4.4f, 
-                      `path` = %s, 
-                      `args` = '%s', 
-                      `post` = '%s',
-                      `uid` = %d, 
-                      `updated` = %d
-        ", $fid, $fncid, $pid, $time, $_GET['q'], $args, $post, $user->uid, $unixtime);
-      } else {
-      }
+      /* SAVE TRACE ITEM */
+      debugger_db_register_trace($fid, $fncid, $pid, $time, $time_delta, $uri, 0, $args, $post);
     }
   }
+}
+
+/**
+ * Register new trace item
+ */
+function debugger_db_register_trace($fid, $fncid, $pid, $time, $time_delta, $uri, $unixtime, $args = '', $post = '') {
+  global $user;
+  db_query("REPLACE INTO {debugger_traces}
+            SET
+                `fid` = %d, 
+                `fncid` = %d, 
+                `pid` = %d, 
+                `time` = %f, 
+                `path` = '%s', 
+                `args` = '%s', 
+                `post` = '%s',
+                `uid` = %d, 
+                `updated` = %d
+  ", $fid, $fncid, $pid, $time, $uri, $args, $post, $user->uid, $unixtime);
+                // `time_delta` = %4.4f, 
 }
 
 /**
  * Get function ID from database via pathfile
  */
 function debugger_db_get_fcnid_via_name($name) {
-  return db_result(db_query("SELECT fid FROM {debugger_functions} WHERE name = '%s'", $name));
+  return db_result(db_query("SELECT fncid FROM {debugger_functions} WHERE name = '%s'", $name));
 }
 
 /**
  * Register new function into database
  */
-function debugger_db_register_function($function, $fid, $line, $args = NULL, $desc = NULL) {
-  return db_query("INSERT INTO {debugger_functions} SET `name` = '%s', `module` = '%s', `line` = '%d', `args` = '%s'", $function, $fid, $line, $args, $desc);
+function debugger_db_register_function($function, $fid, $line, $args = '', $desc = '') {
+  return db_query("INSERT INTO {debugger_functions} SET `name` = '%s', `fid` = '%s', `line` = '%d', `args` = '%s', `description` = '%s'", $function, $fid, $line, $args, $desc);
 }
 
 /**
@@ -83,8 +105,22 @@ function debugger_db_register_file($file) {
 }
 
 /**
+ * Get relative path of the filepath
+ */
+function debugger_get_relative_path($filepath) {
+  return substr($filepath, strlen(getcwd())+1);
+}
+/**
  * Detect module name by file
  */
 function debugger_module_via_file($file) {
-  return 'test';
+  $module = '(unknown)';
+  if (!strpos($file, '/') !== FALSE || strpos($file, 'includes/') === 0) {
+    $module = 'Drupal';
+  } else if (($extension = end(explode('.', ($filename = basename($file))))) == 'module') { // check for .module extension and get the name
+      $module = substr($filename, 0, -1-strlen($extension));
+  } else {
+    $module = '(todo)';
+  } // end: else
+  return $module;
 }
