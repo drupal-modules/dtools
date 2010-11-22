@@ -12,6 +12,7 @@
  */
 
 require_once 'debugger.api.inc'; // load API functions
+declare(ticks = 1);
 register_tick_function('debugger_tick');
 
 define('D_MIN_TIMER', 0.01);

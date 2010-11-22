@@ -336,6 +336,47 @@ function debugger_schema() {
 }
 
 /**
+ * Test and report Drupal installation requirements.
+ *
+ * @param $phase
+ *   The current system installation phase.
+ * @return
+ *   An array of system requirements.
+ */
+function debugger_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+
+  try {
+    declare(ticks = 1);
+    // register_shutdown_function('drupal_set_message', 'Sorry!'); // Doesn't work when crashes
+    register_tick_function('debugger_tick'); // FIXME: it crashes anyway, needs some better method to check it
+    unregister_tick_function('debugger_tick');
+  } catch (Exception $e) {
+  }
+// var_dump($debugger_compatible); exit;
+
+  if (!debugger_test(TRUE)) {
+    $requirements['debugger_php']['title'] = $t("PHP register_tick compatible");
+    $requirements['debugger_php']['description'] = $t("Your PHP installation doesn't support register_tick_function() on threaded web server modules with PHP 5.2 or lower, sorry.");
+    $requirements['debugger_php']['severity'] = REQUIREMENT_ERROR;
+    /* Learn more: http://php.net/register_tick_function */
+  }
+
+  return $requirements;
+}
+
+/**
+ * Test function to check if PHP installation supports register_tick_function()
+ */
+function debugger_test($return = FALSE) {
+  static $debugger_compatible = FALSE;
+  !$return ? $debugger_compatible = TRUE : NULL;
+  return $debugger_compatible;
+}
+
+/**
  * Implementation of hook_install().
  */
 function debugger_install() {
