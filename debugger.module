@@ -15,7 +15,7 @@ require_once 'debugger.api.inc'; // load API functions
 declare(ticks = 1);
 register_tick_function('debugger_tick');
 
-define('D_MIN_TIMER', 0.01);
+define('D_MIN_TIMER', 0);
 define('D_SAVE_COUNTER', 100);
 
 /**
@@ -141,6 +141,7 @@ function debugger_check_curr_path() {
 function debugger_tick($dump = FALSE) {
   static $tick_counter = 0;
   global $debugger_trace, $last_timer, $last_memory;
+  /* CALCULATE RESOURCES FROM THE LAST TIME */
   $curr_timer = microtime(TRUE);
   $curr_memory = memory_get_usage();
   $time = (float)$curr_timer-$last_timer;
