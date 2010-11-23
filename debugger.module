@@ -62,6 +62,16 @@ function debugger_perm() {
 }
 
 /**
+ * Implementation of hook_views_api().
+ */
+function debugger_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'debugger') .'/views/includes',
+  );
+}
+
+/**
  * Implementation of hook_exit().
  */
 function debugger_exit() {

@@ -123,6 +123,7 @@ function debugger_schema() {
         'not null' => TRUE,
         'default' => ''),
     ),
+    /* TODO: timestamp */
     'primary key' => array('rid'),
     'indexes' =>
       array(
@@ -240,14 +241,6 @@ function debugger_schema() {
   $schema['debugger_traces'] = array(
     'description' => t('Stores straces for Drupal debugger.'),
     'fields' => array(
-/*
-      'unique_call' => array(
-        'description' => 'Primary Key contains: Filepath, line, pid',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => ''),
-*/
       'tid' => array(
         'description' => 'The primary identifier for a trace.',
         'type' => 'serial',
@@ -351,9 +344,10 @@ function debugger_requirements($phase) {
   try {
     declare(ticks = 1);
     // register_shutdown_function('drupal_set_message', 'Sorry!'); // Doesn't work when crashes
-    register_tick_function('debugger_tick'); // FIXME: it crashes anyway, needs some better method to check it
-    unregister_tick_function('debugger_tick');
+    register_tick_function('debugger_test'); // FIXME: it crashes anyway, needs some better method to check it
+    unregister_tick_function('debugger_test');
   } catch (Exception $e) {
+    watchdog('php', $e, array(), 'error'); // TODO: check the correct parameters
   }
 // var_dump($debugger_compatible); exit;
 
