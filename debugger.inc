@@ -81,13 +81,7 @@ function debugger_savetrace() {
 // TODO: $query = '/* '. $name .' : '. $bt[2]['function'] .' */ '. $query; - check which function run which query and save into debugger_db_queries table
   global $queries;
   $num_sql = count($queries);
-  debugger_api_db_update_request($request_id, $fid, $fncid, key($mem_fncid), key($slow_fncid), $slow_qid, $total_time, $total_memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices);
+  debugger_api_db_finish_request($request_id, $fid, $fncid, key($mem_fncid), key($slow_fncid), $slow_qid, $total_time, $total_memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices);
 }
 
-/**
- * Get relative path of the filepath
- */
-function debugger_get_relative_path($filepath) {
-  return substr($filepath, strlen(getcwd())+1);
-}
 

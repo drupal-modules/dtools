@@ -13,19 +13,22 @@
 
 require_once 'debugger.api.inc'; // load API functions
 declare(ticks = 1);
-register_tick_function('debugger_tick');
 
 define('D_MIN_TIMER', 0);
 define('D_SAVE_COUNTER', 100);
 
 /**
  * Implementation of hook_boot().
+ * 
  */
 function debugger_boot() {
-  if (debugger_enabled()) {
+  if (debugger_enabled()) { // to enable it, go to: admin/settings/debugger
     register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
     variable_set('dev_query', 1); // Enable query logging // TODO: convert to configurable setting?
     debugger_check_curr_path();
+    debugger_api_clear_data();
+    debugger_api_db_register_request();
+    register_tick_function('debugger_tick'); // ACTIVATE debugger; if crashing, see: http://php.net/register_tick_function
   }
 }
 
@@ -88,23 +91,28 @@ function debugger_shutdown() {
   if (!$debugger_exit) { // If hook_exit wasn't executed, check if we are out of memory?
     $ini_size = ini_get("memory_limit");
     $curr_size = memory_get_usage();
-
-    /* format size */
-    $units = array('B', 'K', 'M', 'G', 'T');
-    for ($i = 0; $curr_size >= 1024 && $i < 4; $i++) $curr_size /= 1024;
-    if (round($curr_size).$units[$i] == $ini_size) { // FIXME: FIX for 1G and more
-      print 'Fatal Error: Please increase your PHP memory limit in your php.ini!';
-      db_query("UPDATE system SET `status` = 0 WHERE name = 'debugger'"); // FIXME: do we have connection enabled on shutdown?
-      print 'After that please re-enable the module!';
-      exit;
+    /* convert format size to bytes */
+    switch (substr($ini_size, -1)) {
+        case 'M': case 'm': (int)$ini_size *= 1048576; break;
+        case 'K': case 'k': (int)$ini_size *= 1024; break;
+        case 'G': case 'g': (int)$ini_size *= 1073741824; break;
+    }
+    
+    if ($curr_size+1024*1024 > $ini_size) { // FIXME: FIX for 1G and more
+      print "Fatal Error: Please increase your PHP memory limit in your php.ini! Disabling...<br>\n";
+      variable_set('debugger_enabled', FALSE);
+      print "After that please activate Drupal debugger from settings again!<br>\n";
     }
   }
   if (debugger_enabled()) {
     variable_set('dev_query', 0); // TODO: convert to configurable setting?
     debugger_check_curr_path(); // Fix the Apache bug when current directory is changed on shutdown
-    module_load_include('inc', 'debugger'); // include additional functions
-    debugger_savetrace(); // save backtrace into db
+    // module_load_include('inc', 'debugger'); // include additional functions
+    // debugger_savetrace(); // save backtrace into db
     unregister_tick_function('debugger_tick');
+    global $queries;
+    $num_sql = count($queries);
+    debugger_api_db_finish_request();
   }
 }
 
@@ -138,12 +146,12 @@ function debugger_check_curr_path() {
  * Note: microtime() - PHP 5.0.0  The get_as_float parameter was added.
  * Note: memory_get_peak_usage() - PHP 5.2.1  Compiling with --enable-memory-limit is no longer required for this function to exist. , PHP 5.2.0  real_usage was added.
  */ 
-function debugger_tick($dump = FALSE) {
+function debugger_tick($ticks = FALSE) {
   static $tick_counter = 0;
-  global $debugger_trace, $last_timer, $last_memory;
+  global $last_timer, $last_memory; // $debugger_trace
   /* CALCULATE RESOURCES FROM THE LAST TIME */
   $curr_timer = microtime(TRUE);
-  $curr_memory = memory_get_usage();
+  $curr_memory = function_exists('memory_get_peak_usage') ? memory_get_peak_usage() : memory_get_usage();
   $time = (float)$curr_timer-$last_timer;
   $memory = (float)$curr_memory-$last_memory;
   if ($time > (float)D_MIN_TIMER) {
@@ -151,9 +159,9 @@ function debugger_tick($dump = FALSE) {
     $last_timer = $curr_timer;
     $last_memory = $curr_memory;
   }
-  $tick_counter++; 
-  if ($dump) {
-    return array($debugger_trace, $tick_counter);
+  if ($ticks) {
+    return array($tick_counter);
   }
+  $tick_counter++; 
 }
 

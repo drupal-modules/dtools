@@ -122,8 +122,12 @@ function debugger_schema() {
         'length' => 255,
         'not null' => TRUE,
         'default' => ''),
+    'timestamp' => array(
+      'description' => 'The Unix timestamp when the request was created.',
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0),
     ),
-    /* TODO: timestamp */
     'primary key' => array('rid'),
     'indexes' =>
       array(
@@ -132,10 +136,10 @@ function debugger_schema() {
   );
 
   $schema['debugger_functions'] = array(
-    'description' => t('Stores functions for Drupal debugger.'),
+    'description' => t('Stores function calls for Drupal debugger.'),
     'fields' => array(
       'fncid' => array(
-        'description' => 'The primary identifier for a file.',
+        'description' => 'The primary identifier for a function.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE),
@@ -154,7 +158,6 @@ function debugger_schema() {
       'line' => array(
         'description' => 'The line of the file.',
         'type' => 'int',
-        'unsigned' => TRUE,
         'not null' => TRUE),
       'args' => array(
         'description' => 'Serialized function arguments.',
@@ -175,11 +178,12 @@ function debugger_schema() {
     ),
     'primary key' => array('fncid'),
     'unique keys' => array(
-      'function_name' => array('name'),
+      'name_fid_line' => array('name', 'fid', 'line'),
     ),
     'indexes' =>
       array(
         'name' => array('name'),
+        'fid' => array('fid'),
       ),
   );
 
@@ -276,6 +280,11 @@ function debugger_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0),
+      'line' => array(
+        'description' => 'The line in the file of that trace.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
       'rid' => array(
         'description' => 'The request identifier.',
         'type' => 'int',
@@ -321,7 +330,7 @@ function debugger_schema() {
     ),
     'primary key' => array('tid'),
     'unique keys' => array(
-      'fncid_pfncid' => array('fncid', 'pfncid'),
+      'rid_fncid_pfncid_fid_line' => array('rid', 'fncid', 'pfncid', 'fid', 'line'),
     ),
     'indexes' =>
       array(
