@@ -152,7 +152,7 @@ function debugger_schema() {
       'fid' => array(
         'description' => 'File ID where this function exists.',
         'type' => 'int',
-        'unsigned' => TRUE,
+        // 'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0),
       'line' => array(

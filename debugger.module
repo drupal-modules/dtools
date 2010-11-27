@@ -24,10 +24,15 @@ define('D_SAVE_COUNTER', 100);
 function debugger_boot() {
   if (debugger_enabled()) { // to enable it, go to: admin/settings/debugger
     register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
-    variable_set('dev_query', 1); // Enable query logging // TODO: convert to configurable setting?
     debugger_check_curr_path();
     debugger_api_clear_data();
-    debugger_api_db_register_request();
+    debugger_api_db_register_request(); // register error handler before Drupal does
+    if (variable_get('debugger_enable_error_handler', TRUE)) {
+      variable_set('dev_query', 1); // Enable query logging
+    }
+    if (variable_get('debugger_enable_error_handler', TRUE)) {
+      set_error_handler('debugger_api_drupal_error_handler');
+    }
     register_tick_function('debugger_tick'); // ACTIVATE debugger; if crashing, see: http://php.net/register_tick_function
   }
 }
@@ -36,6 +41,11 @@ function debugger_boot() {
  * Implementation of hook_init().
  */
 function debugger_init() {
+  if (debugger_enabled()) { // to enable it, go to: admin/settings/debugger
+    if (variable_get('debugger_enable_error_handler', TRUE)) {
+      set_error_handler('debugger_api_drupal_error_handler'); // register error handler again
+    }
+  }
 /* Manually install again
     module_load_include('install', 'debugger');
     debugger_install();
@@ -100,12 +110,14 @@ function debugger_shutdown() {
     
     if ($curr_size+1024*1024 > $ini_size) { // FIXME: FIX for 1G and more
       print "Fatal Error: Please increase your PHP memory limit in your php.ini! Disabling...<br>\n";
-      variable_set('debugger_enabled', FALSE);
+      variable_set('debugger_enable', FALSE);
       print "After that please activate Drupal debugger from settings again!<br>\n";
     }
   }
   if (debugger_enabled()) {
-    variable_set('dev_query', 0); // TODO: convert to configurable setting?
+    if (variable_get('debugger_enable_error_handler', TRUE)) {
+      variable_set('dev_query', 0);
+    }
     debugger_check_curr_path(); // Fix the Apache bug when current directory is changed on shutdown
     // module_load_include('inc', 'debugger'); // include additional functions
     // debugger_savetrace(); // save backtrace into db
@@ -121,7 +133,7 @@ function debugger_shutdown() {
  */
 function debugger_enabled() {
   $path = explode('/', $_GET['q']);
-  $res = variable_get('debugger_enabled', FALSE) && (!($path[0] == 'admin') || variable_get('debugger_enabled_admin', FALSE));
+  $res = variable_get('debugger_enable', FALSE) && (!($path[0] == 'admin') || variable_get('debugger_enable_admin', FALSE));
   return $res;
 }
 
@@ -164,4 +176,5 @@ function debugger_tick($ticks = FALSE) {
   }
   $tick_counter++; 
 }
+
 
