@@ -20,10 +20,9 @@ declare(ticks = 1);
  * Implementation of hook_boot(). Runs even for cached pages.
  */
 function wsod_boot() {
-  global $drupal_path, $wsod_exit;
+  global $drupal_path;
   $drupal_path = getcwd();
   register_shutdown_function('wsod_check_wsod');
-  $wsod_exit = FALSE; // init global variable
 } 
 
 /**
@@ -54,7 +53,7 @@ function wsod_menu() {
     'title' => 'WSOD',
     'access callback' => 'wsod_check_user',
     'access arguments' => array(1, 2), // username/password_in_md5
-    'page callback' => 'wsod_check_wsod',
+    'page callback' => 'wsod_check_wsod_callback',
     'page arguments' => array(TRUE),
     'type' => MENU_CALLBACK,
   );
@@ -62,7 +61,7 @@ function wsod_menu() {
     'title' => 'WSOD',
     'access callback' => 'wsod_check_user',
     'access arguments' => array(1, 2), // username/password_in_md5
-    'page callback' => 'wsod_check_wsod',
+    'page callback' => 'wsod_check_wsod_callback',
     'page arguments' => array(TRUE),
     'type' => MENU_CALLBACK,
   );
@@ -109,9 +108,15 @@ function wsod_form_alter($form, $form_state, $form_id) {
 /**
  * Implementation of hook_exit().
  */
-function wsod_exit($destination = TRUE) {
-  global $wsod_exit;
-  $wsod_exit = $destination; // set each time TRUE or destination url if hook_exit was executed
+function wsod_exit($destination = TRUE, $check = FALSE, $ignore = TRUE) {
+  static $wsod_exit = FALSE, $wsod_exit_ignore = FALSE;
+  if ($destination) {
+    $wsod_exit = $destination; // set each time TRUE or destination url if hook_exit was executed
+  } else if ($check) {
+    return $wsod_exit && !$wsod_exit_ignore;
+  } else if ($ignore) {
+    $wsod_exit_ignore = TRUE;
+  }
 }
 
 /**
@@ -119,6 +124,14 @@ function wsod_exit($destination = TRUE) {
  */
 function wsod_theme_registry_alter(&$items) {
   /* TODO: check for backtrace if some module mess up with theme registry */
+}
+
+/**
+ * Implementation of menu callback
+ */
+function wsod_check_wsod_callback() {
+  wsod_exit(FALSE, FALSE, TRUE);
+  wsod_check_wsod(TRUE);
 }
 
 /**
@@ -172,7 +185,10 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         return;
     }
 
-    if (!$emergency && !variable_get('wsod_live_checking', FALSE) && arg(0) <> 'wsod') {
+    $path = $_GET['q'];
+    if (arg(0) == 'wsod') {
+      $path = 'node';
+    } if (!$emergency && !variable_get('wsod_live_checking', FALSE) && arg(0) <> 'wsod') {
       return;
     }
    
@@ -206,8 +222,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     /* check if hook_exit has been executed properly */
-    global $wsod_exit;
-    if (!$wsod_exit && module_exists('wsod')) {
+    if (!($wsod_exit = wsod_exit(FALSE, TRUE)) && module_exists('wsod') && arg(0) <> 'wsod') {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
         $output .= t('Backtrace: ') . wsod_get_backtrace() . $nl . $nl;
         $_GET['debug'] ? wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . $nl; // DEBUG_PRINT
@@ -243,7 +258,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     // check input variables
-    $path = $_GET['q'];
     isset($_GET['fix']) ? $fix_on_fly = TRUE : NULL; // if fix is defined, then switch to fixing mode
 
     /* check menu handler */
@@ -375,7 +389,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                 /* TODO: Sometimes can't render page on shutdown, because of some errors recently
                     Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
                  */
-                $output .= t('Ignoring page rendering checking, because of incompability with content_profile module.').$nl;
+                //$output .= t('Ignoring page rendering checking, because of incompability with content_profile module.').$nl;
                 //break;
             }
             $page_output = theme('page', $return); // return page not found, there can be some status error messages
