@@ -18,7 +18,7 @@ if (!empty($drupal_path)) {
 } else {
     $verbose ? print "Fatal error: Couldn't detect your Drupal installation in:<br>\n".$output : NULL;
     $verbose ? print "Move this module inside your Drupal installation!": NULL;
-    exit;
+    exit(FALSE);
 }
 
 /* simulate Drupal boot */
@@ -28,7 +28,7 @@ require_once './includes/menu.inc'; // load menu file (needed for Menu flags)
 $_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
 wsod_drupal_bootstrap_run(DRUPAL_BOOTSTRAP_FULL); // execute WSOD version of Drupal bootstrap
 $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
-$_GET['debug'] ? wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+$_GET['debug'] ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
 wsod_set_nocache();
 $verbose = TRUE; /* redefining - in some cases those function are removed on bootstrap */
 $fix_on_fly  = TRUE; /* redefining - in some cases those function are removed on bootstrap */
@@ -41,7 +41,7 @@ if (!module_exists('wsod')) {
 $_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
 require './index.php';
 $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
-$_GET['debug'] ? wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+$_GET['debug'] ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
 wsod_set_nocache();
 
 // $return = menu_execute_active_handler();
@@ -51,7 +51,7 @@ if (!function_exists('wsod_check_wsod')) { // if wsod testing function doesn't e
     module_rebuild_cache(); // so we need to rebuild path of modules
     drupal_load('module', 'wsod'); // load module files again
 } // if this will not help, please check manually in your filesystem if you don't have duplicated wsod modules
-wsod_check_wsod($verbose, $fix_on_fly, TRUE); // run diagnostic
+wsod_check_wsod($verbose, $fix_on_fly, TRUE, FALSE, $output); // run diagnostic
 
 /**
  * Force PHP to not cache the output
@@ -278,7 +278,7 @@ function wsod_strposall($haystack,$needle){
  */
 function wsod_sess_close() {
   $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
-  $_GET['debug'] ? wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+  $_GET['debug'] ? print wsod_tick(TRUE) : NULL; // DEBUG_PRINT
 
   $is_emergency = (strpos($_SERVER['SCRIPT_FILENAME'], 'emergency.php') !== FALSE);
   wsod_check_wsod(TRUE, $is_emergency, $is_emergency, $is_emergency);

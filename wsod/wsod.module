@@ -69,7 +69,7 @@ function wsod_menu() {
 }
 
 /**
- * Access callback for 'alerts/add/%node'
+ * Implementation of access callback
  * @return boolean
  * 
  * You can generate your passwod in MD5 by following methods:
@@ -95,6 +95,14 @@ function wsod_check_user($username, $crc_sum) {
  */
 function wsod_perm() {
    return array('administer dtools');
+}
+
+/**
+ * Implementation of menu callback
+ */
+function wsod_check_wsod_callback() {
+  wsod_exit(FALSE, FALSE, TRUE);
+  wsod_check_wsod(TRUE);
 }
 
 /**
@@ -127,14 +135,6 @@ function wsod_theme_registry_alter(&$items) {
 }
 
 /**
- * Implementation of menu callback
- */
-function wsod_check_wsod_callback() {
-  wsod_exit(FALSE, FALSE, TRUE);
-  wsod_check_wsod(TRUE);
-}
-
-/**
  * Detect WSOD and fix it
  * 
  * @param bool $verbose
@@ -147,7 +147,7 @@ function wsod_check_wsod_callback() {
  *   returns diagnostics messages
  * 
  */
-function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE, $sess_close = FALSE) {
+function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE, $sess_close = FALSE, $output = '') {
     global $drupal_path, $wsod_locked;
 
     $wsod_locked = TRUE;
@@ -157,8 +157,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!function_exists('t')) {
       function t($msg, $args = NULL) { return $msg; }
     }
-    $output = '';
-    $nl = NL;
 
     // version request
     if ($_GET['v']) {
@@ -197,8 +195,6 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         return;
     }
 
-    $output = ''; // init output
-
     // ignore if we are on non-html page
     $headers = drupal_get_headers(); // FIXME: any other way to get headers?
     $ignore_formats = array('xml', 'javascript', 'json', 'plain', 'image', 'application', 'csv', 'x-comma-separated-values');
@@ -225,7 +221,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!($wsod_exit = wsod_exit(FALSE, TRUE)) && module_exists('wsod') && arg(0) <> 'wsod') {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
         $output .= t('Backtrace: ') . wsod_get_backtrace() . $nl . $nl;
-        $_GET['debug'] ? wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . $nl; // DEBUG_PRINT
+        $_GET['debug'] ? $output .= wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . $nl; // DEBUG_PRINT
         $verbose ? $nl . $nl : $output = t('If you need to debug this issue, please activate verbose mode and submit manually the invalid form and see the output.') . $nl;
         $verbose ? print $output : watchdog('wsod', $output); // print or log the error
         return;
@@ -478,7 +474,7 @@ function wsod_tick($print = FALSE) {
     $last_bt = '#' . $wsod_tick . ': ' . wsod_get_backtrace(0, 5, FALSE, debug_backtrace(TRUE));
     $bts[$wsod_tick++] = $last_bt;
   } else {
-    echo implode(NL . NL, $bts);
+    return implode(NL . NL, $bts);
     $bts = array();
   }
 }
@@ -548,7 +544,7 @@ function wsod_rebuild_menu_router_table() {
  * TODO: Find the module which messing up with theme registry through backtrace
  *
  */
-function wsod_rebuild_theme_registry(&$output = NULL, $nl = NL) {
+function wsod_rebuild_theme_registry(&$output = NULL) {
   drupal_rebuild_theme_registry();
   //module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
   global $theme;
@@ -563,12 +559,12 @@ function wsod_rebuild_theme_registry(&$output = NULL, $nl = NL) {
  * Check issues in theme registry
  *
  */
-function wsod_check_theme_registry(&$output = NULL, $nl = NL) {
+function wsod_check_theme_registry(&$output = NULL) {
   $output ? $output .= t('Checking theme registry...') . $nl: NULL;
   $hooks = theme_get_registry();
   $hook = 'placeholder'; // basic theme hook name, which should exists always in Drupal 6.x
   if (!isset($hooks[$hook])) {
-    $output ? $output .= t('Missing placeholder in theme registry!') . $nl: NULL;
+    $output ? $output .= t('Missing placeholder in theme registry!') . $nl : NULL;
     $output ? $output .= sprintf('If problem appears again, please disable or look for invalid hook_boot code in following modules: %s', implode(', ', module_implements('boot'))) . $nl: NULL;
     wsod_rebuild_theme_registry($output);
   }
