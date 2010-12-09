@@ -11,10 +11,10 @@
  *    Rafal Wieczorek <kenorb@gmail.com>
  */
 
-define('WSOD_TICKS', 1);
 define('WSOD_BT_ARG_LIMIT', 100);
 define('NL', "<br>\n"); // new line in messages
 define('WSOD_ID', '$Id$');
+declare(ticks = 1);
 
 /**
  * Implementation of hook_boot(). Runs even for cached pages.
@@ -50,16 +50,45 @@ function wsod_menu() {
     'access arguments' => array('administer dtools'),
     'type' => MENU_CALLBACK,
   ); 
-  /*
-  $items['wsod'] = array( // TODO: not tested yet
+  $items['wsod'] = array(
     'title' => 'WSOD',
+    'access callback' => 'wsod_check_user',
+    'access arguments' => array(1, 2), // username/password_in_md5
     'page callback' => 'wsod_check_wsod',
     'page arguments' => array(TRUE),
-    'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
-   */
+  $items['wsod/%/%'] = array(
+    'title' => 'WSOD',
+    'access callback' => 'wsod_check_user',
+    'access arguments' => array(1, 2), // username/password_in_md5
+    'page callback' => 'wsod_check_wsod',
+    'page arguments' => array(TRUE),
+    'type' => MENU_CALLBACK,
+  );
   return $items;
+}
+
+/**
+ * Access callback for 'alerts/add/%node'
+ * @return boolean
+ * 
+ * You can generate your passwod in MD5 by following methods:
+ * - from sql client: SELECT pass FROM users WHERE name = 'my_username'
+ * - from shell console: printf your_password | md5
+ * - Try: http://md5.md/
+ */
+function wsod_check_user($username, $crc_sum) {
+  global $user;
+  $access = FALSE;
+  if (user_access('administer dtools', $user)) {
+    $access = TRUE;
+  } else if ($uid = db_result(db_query("SELECT uid FROM {users} WHERE name = '%s' AND pass = '%s'", $username, $crc_sum))) {
+    // Log in user
+    $user = user_load(array('uid' => $uid));
+    $access = TRUE;
+  }
+  return $access;
 }
 
 /**
@@ -143,7 +172,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         return;
     }
 
-    if (!$emergency && !variable_get('wsod_live_checking', FALSE)) {
+    if (!$emergency && !variable_get('wsod_live_checking', FALSE) && arg(0) <> 'wsod') {
       return;
     }
    
@@ -181,8 +210,8 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!$wsod_exit && module_exists('wsod')) {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
         $output .= t('Backtrace: ') . wsod_get_backtrace() . $nl . $nl;
-        $verbose ? wsod_last_debug_code($verbose) . $nl . $nl : $output = t('If you need to debug this issue, please activate verbose mode and submit manually the invalid form and see the output.') . $nl;
-        $verbose ? print t('Debugging done.') . $nl : NULL;
+        $_GET['debug'] ? wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . $nl; // DEBUG_PRINT
+        $verbose ? $nl . $nl : $output = t('If you need to debug this issue, please activate verbose mode and submit manually the invalid form and see the output.') . $nl;
         $verbose ? print $output : watchdog('wsod', $output); // print or log the error
         return;
     } else if (is_string($wsod_exit)) { // check if $wsod_exit contain new destination url
@@ -220,7 +249,10 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     /* check menu handler */
     if (!$sess_close) { // ignore 2nd call of menu handler when error occurs, in which case wsod is called again
         ob_start();
-        $return = menu_execute_active_handler(); // use q argument to change default path
+        /* WARNING: register_tick_function() should not be used with threaded web server modules with PHP 5.2 or lower!!! */
+        $_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
+        $return = menu_execute_active_handler($path); // use q argument to change the default path
+        $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
         $content_output = ob_get_clean(); // TODO: what if there is some content?
         // CHECK FOR FATAL ERRORS again
         if (wsod_fatal_error_checker($output, $fix_on_fly)) {
@@ -231,9 +263,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     if (is_null($return)) { /* check menu handler */
-        $output .= sprintf("%s: returned %s - it's very bad!", 'menu_execute_active_handler()', 'NULL').$nl;
-        $output .= t("WSOD detected!").t('&nbsp;').t("Checking for problems...").$nl;
-        $output .= sprintf(t("ERROR: %s returned empty value!"), 'menu_execute_active_handler()').$nl;
+        $output .= sprintf("%s: returned %s - it's very bad!", 'menu_execute_active_handler()', 'NULL') . $nl;
+        $output .= t("WSOD detected!").t('&nbsp;') . t("Checking for problems...") . $nl;
+        $output .= sprintf(t("ERROR: %s returned empty value!"), 'menu_execute_active_handler()') . $nl;
         /* check theme hooks */
         $res = wsod_validate_theme_hooks($verbose, $output);
         if (!$res) {
@@ -417,37 +449,23 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
  * 
  */
 function wsod_last_debug_code() {
-  @apache_setenv('no-gzip', 1);
-  @ini_set('zlib.output_compression', 0);
-  @ini_set('implicit_flush', 1);
-  for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
-  ob_implicit_flush(1);
-
-  echo 'Debuging code, please wait...' . NL;
-  echo 'Note: When page loading is finished, please check the recent backtrace at the bottom.' . NL;
-
-  /* Note: shutdown function doesn't work here ;/ [ register_shutdown_function('print', 'works'); ] */
-
-  /* WARNING: register_tick_function() should not be used with threaded web server modules with PHP 5.2 or lower!!! */
-  set_time_limit(0);
-  declare(ticks = 1);
-  if (register_tick_function('wsod_tick')) {
-      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-      menu_execute_active_handler();
-  }
-  unregister_tick_function('wsod_tick');
-  echo 'Debugging complete, no problem found!;/' . NL;
+  // require 'wsod_debug.php';
 }
 
 /**
- * Function run on every 
+ * Implementation of register_tick_function callback
+ *
+ * Function which is executed on every line of code
  * 
  */
-function wsod_tick($return = FALSE) {
-  static $wsod_tick = 0, $wsod_counter = 0;
-  if ($wsod_tick++ > WSOD_TICKS) {
-    echo '#' . $wsod_counter++ . ': ' . wsod_get_backtrace(1, 10) . NL . NL;
-    // global $wsod_debug; $wsod_debug[] = debug_backtrace(TRUE);
+function wsod_tick($print = FALSE) {
+  static $wsod_tick = 0, $bts = array();
+  if (!$print) {
+    $last_bt = '#' . $wsod_tick . ': ' . wsod_get_backtrace(0, 5, FALSE, debug_backtrace(TRUE));
+    $bts[$wsod_tick++] = $last_bt;
+  } else {
+    echo implode(NL . NL, $bts);
+    $bts = array();
   }
 }
 
@@ -544,6 +562,15 @@ function wsod_check_theme_registry(&$output = NULL, $nl = NL) {
 
 /**
  * Return backtrace
+ * 
+ * @param integer $no_del
+ *   Number elements to remove from the backtrace from the beginning
+ * @param integer $tail
+ *   Number elements to to keep removing the rest from the backtrace from the end
+ * @param bool $in_array
+ *   If TRUE, return as array, instead as string
+ * @param object/array $input_backtrace
+ *   If provided, use this backtrace, instead of current
  */
 function wsod_get_backtrace($no_del = 1, $tail = 0, $in_array = FALSE, $input_backtrace = NULL) {
   $backtrace = $input_backtrace ? $input_backtrace : debug_backtrace(TRUE);
@@ -551,21 +578,35 @@ function wsod_get_backtrace($no_del = 1, $tail = 0, $in_array = FALSE, $input_ba
   if (is_array($backtrace)) {
     // OLD CODE: for ($i = 0; $i < $no_del; $i++) { array_shift($backtrace); } // FIXME: use array_slice()
     /* Note: PHP Compability - The optional preserve_keys parameter was added in 5.0.2. */
-    (count($backtrace) >= $no_del + 1) ? $backtrace = array_slice($backtrace, 0, (-$no_del - 1), TRUE) : NULL; // remove recent function from backtrace (including current one)
+    (count($backtrace) >= $no_del + 1) ? $backtrace = array_slice($backtrace, $no_del) : NULL; // remove recent function from backtrace
     (count($backtrace) >= $tail) ? $backtrace = array_slice($backtrace, (-$tail), NULL, TRUE) : NULL; // return only last specified number of functions
+    // ($tail && $tail < count($backtrace)) ? $backtrace = array_slice($backtrace, 0, -$tail) : NULL; // delete number of elements from end
     foreach ($backtrace as $index => $function) {
         $function_name = $function['function'];
         $filename = !empty($backtrace[$index]['file']) ? basename($backtrace[$index]['file']) : '?';
         $line = !empty($backtrace[$index]['line']) ? $backtrace[$index]['line'] : '?';
-        $args = NULL;
-        if (!empty($function['args']) && !is_bool($function['args'])) {
-          $args = is_scalar($function['args']) ? $function['args'] : serialize($function['args']); // serialize arrays and objects
-        } elseif (is_bool($function['args'])) {
-          $args = $function['args'] ? 'TRUE' : 'FALSE';
-        } else {
-          $args = '';
+        $args = '';
+        switch (gettype($arg = $function['args'])) {
+          case 'boolean':
+            $args = $arg ? 'TRUE' : 'FALSE';
+          break;
+          case 'integer':
+          case 'string':
+          case 'double':
+            $args = $arg;
+          break;
+          case 'resource':
+            $args = gettype($arg);
+          break;
+          case 'NULL':
+            $args = 'NULL';
+          break;
+          case 'array':
+          case 'object':
+          default:
+            $args = serialize($arg);
         }
-        $args = (strlen($args) > WSOD_BT_ARG_LIMIT) ? gettype($function['args']) : gettype($function['args']) . ':' . $args;
+        $args = (strlen($args) > WSOD_BT_ARG_LIMIT) ? gettype($function['args']) : $args;
         $buffer[] = "$function_name($args)[$filename:$line]";
     } 
   }

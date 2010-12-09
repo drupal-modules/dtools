@@ -8,8 +8,10 @@ $verbose = TRUE;
 $fix_on_fly  = TRUE;
 $output = '';
 
+declare(ticks = 1);
 require_once './wsod.module'; // include functions
 
+wsod_set_nocache();
 $drupal_path = wsod_detect_drupal_path($output);
 if (!empty($drupal_path)) {
     chdir($drupal_path); // change dir to Drupal path
@@ -22,7 +24,12 @@ if (!empty($drupal_path)) {
 /* simulate Drupal boot */
 require_once './includes/bootstrap.inc'; // load bootstrap file
 require_once './includes/menu.inc'; // load menu file (needed for Menu flags)
+/* WARNING: register_tick_function() should not be used with threaded web server modules with PHP 5.2 or lower!!! */
+$_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
 wsod_drupal_bootstrap_run(DRUPAL_BOOTSTRAP_FULL); // execute WSOD version of Drupal bootstrap
+$_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
+$_GET['debug'] ? wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+wsod_set_nocache();
 $verbose = TRUE; /* redefining - in some cases those function are removed on bootstrap */
 $fix_on_fly  = TRUE; /* redefining - in some cases those function are removed on bootstrap */
 
@@ -31,27 +38,44 @@ if (!module_exists('wsod')) {
     module_enable(array('wsod')); // enable wsod module if it's not enabled, otherwise we can't run hook_exit
 }
 
-drupal_page_footer();
+$_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
+require './index.php';
+$_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
+$_GET['debug'] ? wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+wsod_set_nocache();
+
+// $return = menu_execute_active_handler();
+// drupal_page_footer();
 
 if (!function_exists('wsod_check_wsod')) { // if wsod testing function doesn't exist, there is some path problem
     module_rebuild_cache(); // so we need to rebuild path of modules
     drupal_load('module', 'wsod'); // load module files again
 } // if this will not help, please check manually in your filesystem if you don't have duplicated wsod modules
-
 wsod_check_wsod($verbose, $fix_on_fly, TRUE); // run diagnostic
+
+/**
+ * Force PHP to not cache the output
+ */
+function wsod_set_nocache() {
+  @apache_setenv('no-gzip', 1);
+  @ini_set('zlib.output_compression', 0);
+  @ini_set('implicit_flush', 1);
+  for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); } 
+  ob_implicit_flush(1);
+}
 
 /**
  * WSOD version of Drupal drupal_bootstrap()
  */
 function wsod_drupal_bootstrap_run($phase) {
-  drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
-  drupal_bootstrap(DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE);
-  drupal_bootstrap(DRUPAL_BOOTSTRAP_DATABASE);
+  // drupal_bootstrap(DRUPAL_BOOTSTRAP_CONFIGURATION);
+  // drupal_bootstrap(DRUPAL_BOOTSTRAP_EARLY_PAGE_CACHE);
+  // drupal_bootstrap(DRUPAL_BOOTSTRAP_DATABASE);
   drupal_bootstrap(DRUPAL_BOOTSTRAP_ACCESS);
   wsod_drupal_bootstrap(DRUPAL_BOOTSTRAP_SESSION); // replace handler sess_close() by WSOD
-  drupal_bootstrap(DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE);
-  drupal_bootstrap(DRUPAL_BOOTSTRAP_LANGUAGE);
-  drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
+  // drupal_bootstrap(DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE);
+  // drupal_bootstrap(DRUPAL_BOOTSTRAP_LANGUAGE);
+  // drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
   drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 }
 
@@ -253,6 +277,9 @@ function wsod_strposall($haystack,$needle){
  * 
  */
 function wsod_sess_close() {
+  $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
+  $_GET['debug'] ? wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+
   $is_emergency = (strpos($_SERVER['SCRIPT_FILENAME'], 'emergency.php') !== FALSE);
   wsod_check_wsod(TRUE, $is_emergency, $is_emergency, $is_emergency);
   return TRUE;

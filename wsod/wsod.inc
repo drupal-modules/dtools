@@ -67,7 +67,7 @@ function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages, &$
                 $file = basename($router_item['file']);
                 $messages .= sprintf(t("Included render file: %s"), $file) . $nl; // PRINT included file
             }
-            $messages .= sprintf(t("Checking %s() page callback..."), $router_item['page_callback']) . $nl; // PRINT included file
+            $messages .= sprintf(t("Checking %s() page callback (path: %s)... (change it with q param in URL)"), $router_item['page_callback'], $_GET['q']) . $nl; // PRINT included file
             $res = call_user_func_array($router_item['page_callback'], $router_item['page_arguments']);
         } else {
             $messages .= sprintf(t("User permission denied to execute %s() page callback..."), $router_item['page_callback']) . $nl;
