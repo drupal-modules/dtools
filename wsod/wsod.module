@@ -244,7 +244,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     // ignore some specified callbacks (like Rebuilding permissions)
+    $_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
     $router_item = menu_get_item();
+    $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
     if ($router_item['page_callback'] == 'system_batch_page') {
         return;
     }
@@ -266,6 +268,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         $content_output = ob_get_clean(); // TODO: what if there is some content?
         // CHECK FOR FATAL ERRORS again
         if (wsod_fatal_error_checker($output, $fix_on_fly)) {
+            $_GET['debug'] ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
             $output = ltrim($output);
             $verbose ? print $output : watchdog('wsod', $output); // print or log the error
             return; // can't continue, if there is some fatal error
@@ -443,7 +446,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             }
           }
     }
-
+    $_GET['debug'] ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
     $output = ltrim($output); // remove spaces from output
     if (!empty($output) && empty($page_output)) {
@@ -474,8 +477,9 @@ function wsod_tick($print = FALSE) {
     $last_bt = '#' . $wsod_tick . ': ' . wsod_get_backtrace(0, 5, FALSE, debug_backtrace(TRUE));
     $bts[$wsod_tick++] = $last_bt;
   } else {
-    return implode(NL . NL, $bts);
+    $output = implode(NL . NL, $bts);
     $bts = array();
+    return $output;
   }
 }
 
