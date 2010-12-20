@@ -57,7 +57,7 @@ function debugger_api_db_register_request() {
     $post = serialize($_POST);
     $path = $_GET['q'];
     $query = '';
-    $rpath = menu_get_item(); // FIXME: Doesn't work?
+    $rpath = function_exists('menu_get_item') ? menu_get_item() : ''; // FIXME: Doesn't work?
     $timestamp = time();
     db_query("INSERT INTO {debugger_requests}
       SET
@@ -174,10 +174,11 @@ function debugger_api_register_backtrace($backtrace = NULL, $time = NULL, $memor
   static $slow_fncid = array(), $mem_fncid = array();
   if (!is_null($backtrace)) {
     // $debugger_trace[$tick_counter . ':' . $time . ':' . $memory]  = $backtrace;
-    $curr_thread = $backtrace[1];
-    $file = array_key_exists('file', $curr_thread) ? $curr_thread['file'] : '(unknown)';
-    $line = array_key_exists('line', $curr_thread) ? $curr_thread['line'] : 0;
-    $args = serialize($curr_thread['args']);
+    if ($curr_thread = $backtrace[1]) {
+      $file = array_key_exists('file', $curr_thread) ? $curr_thread['file'] : '(unknown)';
+      $line = array_key_exists('line', $curr_thread) ? $curr_thread['line'] : 0;
+      $args = serialize($curr_thread['args']);
+    }
     $options = '';
     if (!($fid = debugger_api_db_register_file($file))) {
       // $fid = -debugger_api_db_register_file($backtrace[2]['file']); // if not found, use minus for parent

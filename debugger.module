@@ -25,7 +25,7 @@ function debugger_boot() {
   if (debugger_enabled()) { // to enable it, go to: admin/settings/debugger
     register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
     debugger_check_curr_path();
-    debugger_api_clear_data();
+    // debugger_api_clear_data();
     debugger_api_db_register_request(); // register error handler before Drupal does
     if (variable_get('debugger_enable_error_handler', TRUE)) {
       variable_set('dev_query', 1); // Enable query logging
@@ -58,12 +58,54 @@ function debugger_init() {
 function debugger_menu() {
   $items['admin/settings/debugger'] = array(
     'title' => 'Debugger',
-    'description' => t('Manage Drupal debugger'),
+    'description' => 'Manage Drupal debugger.',
+    'position' => 'left',
+    'weight' => 0,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer debugger'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+  $items['admin/settings/debugger/config'] = array(
+    'title' => 'Config',
+    'description' => 'Configuration of Drupal debugger.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('debugger_admin_form'),
     'access arguments' => array('administer debugger'),
     'file' => 'debugger.admin.inc',
   );
+
+/*
+  $items['admin/reports/debugger'] = array(
+    'title'              => 'Debugger log entries',
+    'page callback'      => 'debugger_index_report',
+    'access arguments'   => array('access debugger reports'),
+    'file'               => 'debugger.admin.inc',
+  );
+  $items['admin/reports/debugger/requests'] = array(
+    'title'              => 'Debugger requests',
+    'file'               => 'debugger.admin.inc',
+    'type'               => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/reports/debugger/conf'] = array(
+    'title'              => 'Configuration files',
+    'page callback'      => 'debugger_config_files_overview',
+    'access arguments'   => array('access site reports'),
+    'file'               => 'debugger.admin.inc',
+    'weight'             => 5,
+    'type'               => MENU_LOCAL_TASK,
+  );
+  $items['admin/reports/debugger/conf/%'] = array(
+    'title'              => 'Configuration file',
+    'page callback'      => 'debugger_config_file',
+    'page arguments'     => array(4),
+    'access arguments'   => array('access site reports'),
+    'file'               => 'debugger.admin.inc',
+    'type'               => MENU_CALLBACK,
+  );
+*/
+
   return $items;
 }
 
