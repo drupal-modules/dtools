@@ -11,11 +11,16 @@
  *   Rafal Wieczorek <kenorb@gmail.com>
  */
 
-require_once 'debugger.api.inc'; // load API functions
-declare(ticks = 1);
+define('D_MIN_TIMER', 0.01);
+define('D_SAVE_COUNTER', 1);
 
-define('D_MIN_TIMER', 0);
-define('D_SAVE_COUNTER', 100);
+require_once 'debugger.api.inc'; // load API functions
+/*
+ * "A tick is an event that occurs for every N low-level tickable statements executed by the parser within the declare block.
+ * The value for N is specified using ticks=N within the declare blocks's directive section."
+ * You can increase this value to increase the speed, but accordingly it's less precisely
+ */
+declare(ticks = 1);
 
 /**
  * Implementation of hook_boot().
@@ -27,13 +32,18 @@ function debugger_boot() {
     debugger_check_curr_path();
     // debugger_api_clear_data();
     debugger_api_db_register_request(); // register error handler before Drupal does
-    if (variable_get('debugger_enable_error_handler', TRUE)) {
-      variable_set('dev_query', 1); // Enable query logging
+    if (variable_get('debugger_enable_sql_queries', FALSE)) {
+      variable_set('dev_query', TRUE); // Enable query logging
+    } else if (variable_get('dev_query', TRUE)) {
+      variable_set('dev_query', FALSE);
     }
     if (variable_get('debugger_enable_error_handler', TRUE)) {
       set_error_handler('debugger_api_drupal_error_handler');
     }
     register_tick_function('debugger_tick'); // ACTIVATE debugger; if crashing, see: http://php.net/register_tick_function
+    /* change default PHP time limit */
+    module_load_include('inc', 'debugger'); // include additional functions
+    debugger_set_time_limit(60);
   }
 }
 
@@ -46,16 +56,13 @@ function debugger_init() {
       set_error_handler('debugger_api_drupal_error_handler'); // register error handler again
     }
   }
-/* Manually install again
-    module_load_include('install', 'debugger');
-    debugger_install();
-*/
 }
 
 /**
  * Implementation of hook_menu().
  */
 function debugger_menu() {
+/*
   $items['admin/settings/debugger'] = array(
     'title' => 'Debugger',
     'description' => 'Manage Drupal debugger.',
@@ -66,45 +73,16 @@ function debugger_menu() {
     'file' => 'system.admin.inc',
     'file path' => drupal_get_path('module', 'system'),
   );
+*/
 
-  $items['admin/settings/debugger/config'] = array(
-    'title' => 'Config',
+  $items['admin/settings/debugger'] = array(
+    'title' => 'Debugger Config',
     'description' => 'Configuration of Drupal debugger.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('debugger_admin_form'),
     'access arguments' => array('administer debugger'),
     'file' => 'debugger.admin.inc',
   );
-
-/*
-  $items['admin/reports/debugger'] = array(
-    'title'              => 'Debugger log entries',
-    'page callback'      => 'debugger_index_report',
-    'access arguments'   => array('access debugger reports'),
-    'file'               => 'debugger.admin.inc',
-  );
-  $items['admin/reports/debugger/requests'] = array(
-    'title'              => 'Debugger requests',
-    'file'               => 'debugger.admin.inc',
-    'type'               => MENU_DEFAULT_LOCAL_TASK,
-  );
-  $items['admin/reports/debugger/conf'] = array(
-    'title'              => 'Configuration files',
-    'page callback'      => 'debugger_config_files_overview',
-    'access arguments'   => array('access site reports'),
-    'file'               => 'debugger.admin.inc',
-    'weight'             => 5,
-    'type'               => MENU_LOCAL_TASK,
-  );
-  $items['admin/reports/debugger/conf/%'] = array(
-    'title'              => 'Configuration file',
-    'page callback'      => 'debugger_config_file',
-    'page arguments'     => array(4),
-    'access arguments'   => array('access site reports'),
-    'file'               => 'debugger.admin.inc',
-    'type'               => MENU_CALLBACK,
-  );
-*/
 
   return $items;
 }
@@ -152,13 +130,15 @@ function debugger_shutdown() {
     
     if ($curr_size+1024*1024 > $ini_size) { // FIXME: FIX for 1G and more
       print "Fatal Error: Please increase your PHP memory limit in your php.ini! Disabling...<br>\n";
-      variable_set('debugger_enable', FALSE);
+      if (variable_get('debugger_auto_disable', TRUE)) {
+        variable_set('debugger_enable', FALSE);
+      }
       print "After that please activate Drupal debugger from settings again!<br>\n";
     }
   }
   if (debugger_enabled()) {
-    if (variable_get('debugger_enable_error_handler', TRUE)) {
-      variable_set('dev_query', 0);
+    if (variable_get('dev_query', TRUE) && !variable_get('debugger_enable_sql_queries', FALSE)) {
+      variable_set('dev_query', FALSE);
     }
     debugger_check_curr_path(); // Fix the Apache bug when current directory is changed on shutdown
     // module_load_include('inc', 'debugger'); // include additional functions
@@ -209,7 +189,7 @@ function debugger_tick($ticks = FALSE) {
   $time = (float)$curr_timer-$last_timer;
   $memory = (float)$curr_memory-$last_memory;
   if ($time > (float)D_MIN_TIMER) {
-    debugger_api_register_backtrace(debug_backtrace(TRUE), $time, $memory, $tick_counter, 2);
+    debugger_api_register_backtrace(debug_backtrace(TRUE), $time, $memory, $tick_counter++, 2);
     $last_timer = $curr_timer;
     $last_memory = $curr_memory;
   }

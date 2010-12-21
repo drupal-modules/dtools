@@ -29,7 +29,6 @@ function debugger_admin_form() {
     '#description' => t('Be careful, it could diametrically decrease your website performance.'),
     '#default_value' => variable_get('debugger_enable', FALSE),
   );
-
   $form['debugger']['debugger_enable_error_handler'] = array(
     '#type' => 'checkbox',
     '#title' => t('Track number of errors.'),
@@ -41,7 +40,7 @@ function debugger_admin_form() {
     '#type' => 'checkbox',
     '#title' => t('Track database queries.'),
     '#description' => t('Debug database queries and check execution times and which module run it.'),
-    '#default_value' => variable_get('debugger_enable_error_handler', TRUE),
+    '#default_value' => variable_get('debugger_enable_sql_queries', FALSE),
     '#disabled' => !variable_get('debugger_enable', FALSE),
   );
   $form['debugger']['debugger_enable_admin'] = array(
@@ -51,6 +50,28 @@ function debugger_admin_form() {
     '#default_value' => variable_get('debugger_enable_admin', FALSE),
     '#disabled' => !variable_get('debugger_enable', FALSE),
   );
+  $form['debugger']['debugger_auto_disable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Auto disable debugger on fatal errors.'),
+    '#description' => t('When page will crash or timeout accured, debugger will be disabled for stability reasons. You have to enable it manually again.'),
+    '#default_value' => variable_get('debugger_auto_disable', TRUE),
+    '#disabled' => !variable_get('debugger_enable', FALSE),
+  );
+
+  $form['debugger_advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced Drupal debugger settings.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+/*
+  $form['debugger_advanced']['debugger_enable'] = array(
+    '#type' => 'input',
+    '#title' => t(''),
+    '#description' => t('Be careful, it could diametrically decrease your website performance.'),
+    '#default_value' => variable_get('debugger_enable', FALSE),
+  );
+*/
 
   return system_settings_form($form); 
 }

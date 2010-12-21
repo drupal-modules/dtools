@@ -56,18 +56,16 @@ function debugger_api_db_register_request() {
   if (!$request_id) {
     $post = serialize($_POST);
     $path = $_GET['q'];
-    $query = '';
-    $rpath = function_exists('menu_get_item') ? menu_get_item() : ''; // FIXME: Doesn't work?
+    $query = end(explode('?', $_SERVER["REQUEST_URI"]));
     $timestamp = time();
     db_query("INSERT INTO {debugger_requests}
       SET
         `path` = '%s',
-        `rpath` = '%s',
         `query` = '%s',
         `post` = '%s',
         `uid` = '%d',
         `timestamp` = '%d'
-        ", $path, $rpath, $query, $post, $user->uid, time());
+        ", $path, $query, $post, $user->uid, time());
     $request_id = db_last_insert_id('debugger_requests', 'rid');
     timer_start('debugger');
   }
@@ -80,23 +78,26 @@ function debugger_api_db_register_request() {
 function debugger_api_db_finish_request($options = array()) {
   global $user, $queries;
   $request_id = debugger_api_db_register_request();
+  $menu_item = menu_get_item(); // if you see 'Fatal error: Call to undefined function node_load', please remove exit()/die() function from the code
+  $rpath = $menu_item['path'];
   $errors = debugger_api_drupal_error_handler();
-  // $fid = TODO: // file of router menu callback
-  // $fncid = TODO: // function id of menu router callback
-  // $mem_fncid = // function used the most memory
-  // $slow_fncid = // function which was the slowest
-  // $slow_qid = // SQL query which was the slowest
-  // var_dump($errors['errors']); exit;
+  $fncid = debugger_api_db_register_function($menu_item['page_callback']); // function id of the menu router callback
+  $traces = debugger_api_register_backtrace();
+  $mem_fncid = reset(current($traces['fncid_mem'])); // function used the most memory
+  $slow_fncid = reset(current($traces['fncid_slow']));// function which was the slowest
+  // $slow_qid = // TODO: SQL query which was the slowest
   $time = timer_stop('debugger');
   $total_memory = function_exists('memory_get_peak_usage') ? memory_get_peak_usage() : memory_get_usage();
   $num_sql = count($queries);
-  $num_ticks = debugger_tick(TRUE);
-  // $num_err = // total Drupal errors
-  // $num_warn = // total Drupal warnings
-  // $num_notices = // total Drupal notices
+  $num_ticks = reset(debugger_tick(TRUE));
+  $num_err = count($errors['error']) + count($errors['parse error']);
+  $num_warn = count($errors['warning']) + count($errors['user warning']) + count($errors['strict warning']);
+  $num_notices = count($errors['notice']) + count($errors['user notice']);
+  $page_args = count($menu_item['page_arguments']); // FIXME: convert into serialized string, i.e. $node->nid=123 as (node:123), etc.
 
   return db_query("UPDATE {debugger_requests}
     SET
+      `rpath` = '%s',
       `fid` = '%d',
       `fncid` = '%d',
       `mem_fncid` = '%d',
@@ -111,7 +112,7 @@ function debugger_api_db_finish_request($options = array()) {
       `num_notices` = '%d',
       `options` = '%s'
     WHERE `rid` = '%d'
-      ", $fid, $fncid, $mem_fncid, $slow_fncid, $slow_qid, $time, $memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices, serialize($options), $request_id);
+      ", $rpath, $fid, $fncid, $mem_fncid, $slow_fncid, $slow_qid, $time, $memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices, serialize($options), $request_id);
 }
 
 /**
@@ -171,13 +172,13 @@ function debugger_api_module_via_file($file) {
  */
 function debugger_api_register_backtrace($backtrace = NULL, $time = NULL, $memory = NULL, $tick_counter = NULL, $start = 2) {
   static $debugger_trace = array(), $ptid = 0, $pfncid = 0;
-  static $slow_fncid = array(), $mem_fncid = array();
+  static $fncid_slow = array(0 => 0), $fncid_mem = array(0 => 0);
   if (!is_null($backtrace)) {
     // $debugger_trace[$tick_counter . ':' . $time . ':' . $memory]  = $backtrace;
     if ($curr_thread = $backtrace[1]) {
       $file = array_key_exists('file', $curr_thread) ? $curr_thread['file'] : '(unknown)';
       $line = array_key_exists('line', $curr_thread) ? $curr_thread['line'] : 0;
-      $args = serialize($curr_thread['args']);
+      $args = isset($curr_thread['args']) ? count($curr_thread['args']) : ''; // FIXME: convert to some kind of string format
     }
     $options = '';
     if (!($fid = debugger_api_db_register_file($file))) {
@@ -186,26 +187,31 @@ function debugger_api_register_backtrace($backtrace = NULL, $time = NULL, $memor
     };
     $fncid = debugger_api_db_register_function($curr_thread['function'], $fid, $line, count($args));
     $rid = debugger_api_db_register_request();
-    $tid = debugger_api_db_register_trace($ptid, $fncid, $pfncid, $fid, $rid, $time, $memory, $args, $options);
+    $tid = debugger_api_db_register_trace($ptid, $fncid, $pfncid, $fid, $line, $rid, $time, $memory, $args, $options);
     // array_walk($backtrace, 'debugger_api_db_register_trace_callback');
     // $backtrace = '(' . implode("),\n(", array_map('implode', array_fill(0, count($backtrace), ','), $backtrace)) . ')';
     unset($backtrace[0], $backtrace[1]); // remove first two elements
-    foreach ($backtrace as $key => $tobj) {
-    }
+    // foreach ($backtrace as $key => $tobj) { } // TODO: add option for looking deep into backtrace
     /* CHECK PERFORMANCE */
     $module = debugger_api_module_via_file(debugger_api_get_relative_path($file));
-    if ($memory > current($mem_fncid)) { // check how much memory using this line
-      $mem_fncid = array($tid => $memory); // 
+    $new_mem = current($fncid_mem);
+    if ($memory > $new_mem[1]) { // check how much memory using this line
+      $fncid_mem = array($tid => array($fncid, $memory));
     }
-    if ($time > current($slow_fncid)) {
-      $slow_fncid = array($tid => $time);
+    if ($time > $new_time[1]) {
+      $fncid_slow = array($tid => array($fncid, $time));
     }
 
     /* SAVE PARENTS */
     $ptid = $tid;
     $pfncid = $fncid;
   } else {
-    return $debugger_trace;
+    return
+      array(
+        'traces' => $debugger_trace,
+        'fncid_slow' => $fncid_slow,
+        'fncid_mem' => $fncid_mem,
+      );
   }
 }
 
@@ -236,7 +242,7 @@ function debugger_api_drupal_error_handler($errno, $message, $filename, $line, $
   }
   drupal_error_handler($errno, $message, $filename, $line, $context); // execute original callback
   $types = array(1 => 'error', 2 => 'warning', 4 => 'parse error', 8 => 'notice', 16 => 'core error', 32 => 'core warning', 64 => 'compile error', 128 => 'compile warning', 256 => 'user error', 512 => 'user warning', 1024 => 'user notice', 2048 => 'strict warning', 4096 => 'recoverable fatal error');
-  $errors[$types[$errno]][] = array($message, $filename, $line, $context);
+  $errors[$types[$errno]][] = array($message, $filename, $line); // ignore $context because of memory reasons
 }
 
 /**

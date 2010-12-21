@@ -84,4 +84,11 @@ function debugger_savetrace() {
   debugger_api_db_finish_request($request_id, $fid, $fncid, key($mem_fncid), key($slow_fncid), $slow_qid, $total_time, $total_memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices);
 }
 
-
+/**
+ * Set PHP time limit
+ */
+function debugger_set_time_limit($limit = 60) {
+  if(!ini_get('safe_mode')) {
+    set_time_limit($limit);
+  }
+}

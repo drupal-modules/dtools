@@ -107,27 +107,6 @@ function debugger_views_data() {
       'handler' => 'views_handler_sort',
     ),
   );
-  $data['debugger_requests']['fid'] = array(
-    'title' => t('File ID'),
-    'help' => t('The file id of the menu router callback.'),
-    'field' => array(
-      'handler' => 'views_handler_field',
-      'click sortable' => TRUE,
-    ),
-    'argument' => array(
-      'handler' => 'views_handler_argument_numeric',
-    ),
-    'sort' => array(
-      'help' => t('Sort by File ID'),
-      'handler' => 'views_handler_sort',
-    ),
-    'relationship' => array(
-      'handler' => 'views_handler_relationship',
-      'base' => 'debugger_files',
-      'relationship field' => 'fid',
-      'label' => t('Debugger: File'),
-    ),
-  );
   $data['debugger_requests']['fncid'] = array(
     'title' => t('Function ID of menu router callback'),
     'help' => t('The function id of the menu router callback.'),
