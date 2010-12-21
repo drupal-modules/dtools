@@ -37,7 +37,7 @@ function debugger_admin_form() {
     '#default_value' => variable_get('debugger_enable_error_handler', TRUE),
     '#disabled' => !variable_get('debugger_enable', FALSE),
   );
-  $form['debugger']['debugger_enable_db_queries'] = array(
+  $form['debugger']['debugger_enable_sql_queries'] = array(
     '#type' => 'checkbox',
     '#title' => t('Track database queries.'),
     '#description' => t('Debug database queries and check execution times and which module run it.'),

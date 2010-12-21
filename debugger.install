@@ -187,7 +187,7 @@ function debugger_schema() {
       ),
   );
 
-  $schema['debugger_db_queries'] = array(
+  $schema['debugger_sql_queries'] = array(
     'description' => t('Stores database queries for Drupal debugger.'),
     'fields' => array(
       'qid' => array(

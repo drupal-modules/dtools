@@ -78,7 +78,7 @@ function debugger_savetrace() {
   // TODO: $rpath = get menu callback via path (menu_router)
   // TODO: $fncid = get responsible function from menu callback (menu_router)
   // TODO: $slow_fncid = get responsible function from menu callback (menu_router)
-// TODO: $query = '/* '. $name .' : '. $bt[2]['function'] .' */ '. $query; - check which function run which query and save into debugger_db_queries table
+// TODO: $query = '/* '. $name .' : '. $bt[2]['function'] .' */ '. $query; - check which function run which query and save into debugger_sql_queries table
   global $queries;
   $num_sql = count($queries);
   debugger_api_db_finish_request($request_id, $fid, $fncid, key($mem_fncid), key($slow_fncid), $slow_qid, $total_time, $total_memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices);
