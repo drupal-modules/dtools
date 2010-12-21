@@ -7,7 +7,7 @@
  */
 
 $view = new view;
-$view->name = 'Requests';
+$view->name = 'debugger_requests';
 $view->description = 'Debugger: Requests';
 $view->tag = 'debugger';
 $view->view_php = '';
@@ -140,6 +140,13 @@ $handler->display->display_options['style_options']['info'] = array(
 $handler->display->display_options['style_options']['override'] = 1;
 $handler->display->display_options['style_options']['sticky'] = 0;
 $handler->display->display_options['style_options']['order'] = 'desc';
+/* Empty text: Global: Text area */
+$handler->display->display_options['empty']['area']['id'] = 'area';
+$handler->display->display_options['empty']['area']['table'] = 'views';
+$handler->display->display_options['empty']['area']['field'] = 'area';
+$handler->display->display_options['empty']['area']['label'] = 'Empty data';
+$handler->display->display_options['empty']['area']['empty'] = FALSE;
+$handler->display->display_options['empty']['area']['content'] = 'No data.';
 /* Field: Debugger Requests: Request ID */
 $handler->display->display_options['fields']['rid']['id'] = 'rid';
 $handler->display->display_options['fields']['rid']['table'] = 'debugger_requests';

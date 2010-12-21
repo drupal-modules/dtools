@@ -62,6 +62,13 @@ $handler->display->display_options['style_options']['info'] = array(
 );
 $handler->display->display_options['style_options']['override'] = 1;
 $handler->display->display_options['style_options']['sticky'] = 0;
+/* Empty text: Global: Text area */
+$handler->display->display_options['empty']['area']['id'] = 'area';
+$handler->display->display_options['empty']['area']['table'] = 'views';
+$handler->display->display_options['empty']['area']['field'] = 'area';
+$handler->display->display_options['empty']['area']['label'] = 'Empty data';
+$handler->display->display_options['empty']['area']['empty'] = FALSE;
+$handler->display->display_options['empty']['area']['content'] = 'No data.';
 /* Field: Debugger Functions: Function ID */
 $handler->display->display_options['fields']['fncid']['id'] = 'fncid';
 $handler->display->display_options['fields']['fncid']['table'] = 'debugger_functions';
