@@ -42,6 +42,8 @@ function debugger_views_handlers() {
  * Implementation of hook_views_data().
  */
 function debugger_views_data() {
+
+  module_load_include('inc', 'debugger'); // include additional functions
   $data = array();
 
   /* REQUESTS */
@@ -91,6 +93,9 @@ function debugger_views_data() {
       'handler' => 'views_handler_field',
       'click sortable' => TRUE,
     ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
     'sort' => array(
       'help' => t('Sort by path'),
       'handler' => 'views_handler_sort',
@@ -102,13 +107,16 @@ function debugger_views_data() {
     'field' => array(
       'handler' => 'views_handler_field',
     ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
     'sort' => array(
       'help' => t('Sort by router path'),
       'handler' => 'views_handler_sort',
     ),
   );
   $data['debugger_requests']['fncid'] = array(
-    'title' => t('Function ID of menu router callback'),
+    'title' => t('Function ID of the menu router callback'),
     'help' => t('The function id of the menu router callback.'),
     'field' => array(
       'handler' => 'views_handler_field',
@@ -125,7 +133,7 @@ function debugger_views_data() {
       'handler' => 'views_handler_relationship',
       'base' => 'debugger_functions',
       'relationship field' => 'fncid',
-      'label' => t('Debugger: Function ID of menu callback'),
+      'label' => t('Debugger: Function ID of the menu callback'),
     ),
   );
   $data['debugger_requests']['mem_fncid'] = array(
@@ -145,7 +153,8 @@ function debugger_views_data() {
     'relationship' => array(
       'handler' => 'views_handler_relationship',
       'base' => 'debugger_functions',
-      'relationship field' => 'fncid',
+      'base field' => 'fncid',
+      'relationship field' => 'mem_fncid',
       'label' => t('Debugger: Function ID which used the most memory'),
     ),
   );
@@ -166,7 +175,8 @@ function debugger_views_data() {
     'relationship' => array(
       'handler' => 'views_handler_relationship',
       'base' => 'debugger_functions',
-      'relationship field' => 'fncid',
+      'base field' => 'fncid',
+      'relationship field' => 'slow_fncid',
       'label' => t('Debugger: Function ID (the slowest)'),
     ),
   );
@@ -187,7 +197,8 @@ function debugger_views_data() {
     'relationship' => array(
       'handler' => 'views_handler_relationship',
       'base' => 'debugger_db_queries',
-      'relationship field' => 'qid',
+      'base field' => 'qid',
+      'relationship field' => 'slow_qid',
       'label' => t('Debugger: SQL query (the slowest)'),
     ),
   );
@@ -234,6 +245,11 @@ function debugger_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
+      'float' => TRUE,
+    ),
+    'filter' => array(
+      'help'    => t('Filter by request time'),
+      'handler' => 'views_handler_filter_float',
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
@@ -363,6 +379,14 @@ function debugger_views_data() {
       'handler' => 'views_handler_field',
       'click sortable' => TRUE,
     ),
+    'filter' => array(
+      'help'    => t('Filter by function name.'),
+      'handler' => 'views_handler_filter_in_operator',
+      'options callback' => 'debugger_function_list',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
     'sort' => array(
       'help' => t('Sort by path'),
       'handler' => 'views_handler_sort',
@@ -461,6 +485,9 @@ function debugger_views_data() {
       'handler' => 'views_handler_field',
       'click sortable' => TRUE,
     ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
     'sort' => array(
       'help' => t('Sort by path'),
       'handler' => 'views_handler_sort',
@@ -476,6 +503,7 @@ function debugger_views_data() {
     'filter' => array(
       'help'    => t('Filter by module name'),
       'handler' => 'views_handler_filter_in_operator',
+      'options callback' => 'debugger_module_list',
     ),
     'sort' => array(
       'help' => t('Sort by module name of the file'),
@@ -536,6 +564,11 @@ function debugger_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
+      'float' => TRUE,
+    ),
+    'filter' => array(
+      'help'    => t('Filter by query time'),
+      'handler' => 'views_handler_filter_float',
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
@@ -635,7 +668,8 @@ function debugger_views_data() {
     'relationship' => array(
       'handler' => 'views_handler_relationship',
       'base' => 'debugger_functions',
-      'relationship field' => 'fncid',
+      'base field' => 'fncid',
+      'relationship field' => 'pfncid',
       'label' => t('Debugger: Function Parent'),
     ),
   );

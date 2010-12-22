@@ -147,7 +147,7 @@ $handler->display->display_options['empty']['area']['field'] = 'area';
 $handler->display->display_options['empty']['area']['label'] = 'Empty data';
 $handler->display->display_options['empty']['area']['empty'] = FALSE;
 $handler->display->display_options['empty']['area']['content'] = 'No data.';
-/* Field: Debugger Requests: Request ID */
+/* Field: Debugger: Requests: Request ID */
 $handler->display->display_options['fields']['rid']['id'] = 'rid';
 $handler->display->display_options['fields']['rid']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['rid']['field'] = 'rid';
@@ -162,7 +162,7 @@ $handler->display->display_options['fields']['rid']['alter']['strip_tags'] = 0;
 $handler->display->display_options['fields']['rid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['rid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['rid']['empty_zero'] = 0;
-/* Field: Debugger Requests: Path */
+/* Field: Debugger: Requests: Path */
 $handler->display->display_options['fields']['path']['id'] = 'path';
 $handler->display->display_options['fields']['path']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['path']['field'] = 'path';
@@ -176,7 +176,7 @@ $handler->display->display_options['fields']['path']['alter']['strip_tags'] = 0;
 $handler->display->display_options['fields']['path']['alter']['html'] = 0;
 $handler->display->display_options['fields']['path']['hide_empty'] = 0;
 $handler->display->display_options['fields']['path']['empty_zero'] = 0;
-/* Field: Debugger Requests: Router path */
+/* Field: Debugger: Requests: Router path */
 $handler->display->display_options['fields']['rpath']['id'] = 'rpath';
 $handler->display->display_options['fields']['rpath']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['rpath']['field'] = 'rpath';
@@ -190,7 +190,7 @@ $handler->display->display_options['fields']['rpath']['alter']['strip_tags'] = 0
 $handler->display->display_options['fields']['rpath']['alter']['html'] = 0;
 $handler->display->display_options['fields']['rpath']['hide_empty'] = 0;
 $handler->display->display_options['fields']['rpath']['empty_zero'] = 0;
-/* Field: Debugger Requests: File ID */
+/* Field: Broken/missing handler */
 $handler->display->display_options['fields']['fid']['id'] = 'fid';
 $handler->display->display_options['fields']['fid']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['fid']['field'] = 'fid';
@@ -204,7 +204,7 @@ $handler->display->display_options['fields']['fid']['alter']['strip_tags'] = 0;
 $handler->display->display_options['fields']['fid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['fid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['fid']['empty_zero'] = 0;
-/* Field: Debugger Requests: Function ID of menu router */
+/* Field: Debugger: Requests: Function ID of the menu router callback */
 $handler->display->display_options['fields']['fncid']['id'] = 'fncid';
 $handler->display->display_options['fields']['fncid']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['fncid']['field'] = 'fncid';
@@ -219,7 +219,7 @@ $handler->display->display_options['fields']['fncid']['alter']['strip_tags'] = 0
 $handler->display->display_options['fields']['fncid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['fncid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['fncid']['empty_zero'] = 0;
-/* Field: Debugger Requests: Function ID which used the most memory */
+/* Field: Debugger: Requests: Function ID which used the most memory */
 $handler->display->display_options['fields']['mem_fncid']['id'] = 'mem_fncid';
 $handler->display->display_options['fields']['mem_fncid']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['mem_fncid']['field'] = 'mem_fncid';
@@ -234,7 +234,7 @@ $handler->display->display_options['fields']['mem_fncid']['alter']['strip_tags']
 $handler->display->display_options['fields']['mem_fncid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['mem_fncid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['mem_fncid']['empty_zero'] = 0;
-/* Field: Debugger Requests: Function ID which was the slowest */
+/* Field: Debugger: Requests: Function ID which was the slowest */
 $handler->display->display_options['fields']['slow_fncid']['id'] = 'slow_fncid';
 $handler->display->display_options['fields']['slow_fncid']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['slow_fncid']['field'] = 'slow_fncid';
@@ -249,7 +249,7 @@ $handler->display->display_options['fields']['slow_fncid']['alter']['strip_tags'
 $handler->display->display_options['fields']['slow_fncid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['slow_fncid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['slow_fncid']['empty_zero'] = 0;
-/* Field: Debugger Requests: Query ID which was the slowest */
+/* Field: Debugger: Requests: Query ID which was the slowest */
 $handler->display->display_options['fields']['slow_qid']['id'] = 'slow_qid';
 $handler->display->display_options['fields']['slow_qid']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['slow_qid']['field'] = 'slow_qid';
@@ -264,7 +264,7 @@ $handler->display->display_options['fields']['slow_qid']['alter']['strip_tags'] 
 $handler->display->display_options['fields']['slow_qid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['slow_qid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['slow_qid']['empty_zero'] = 0;
-/* Field: Debugger Requests: Query path */
+/* Field: Debugger: Requests: Query path */
 $handler->display->display_options['fields']['query']['id'] = 'query';
 $handler->display->display_options['fields']['query']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['query']['field'] = 'query';
@@ -295,7 +295,7 @@ $handler->display->display_options['fields']['uid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['uid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['uid']['empty_zero'] = 0;
 $handler->display->display_options['fields']['uid']['link_to_user'] = 1;
-/* Field: Debugger Requests: Total time */
+/* Field: Debugger: Requests: Total time */
 $handler->display->display_options['fields']['time']['id'] = 'time';
 $handler->display->display_options['fields']['time']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['time']['field'] = 'time';
@@ -311,7 +311,7 @@ $handler->display->display_options['fields']['time']['alter']['html'] = 0;
 $handler->display->display_options['fields']['time']['hide_empty'] = 0;
 $handler->display->display_options['fields']['time']['empty_zero'] = 0;
 $handler->display->display_options['fields']['time']['format_plural'] = 0;
-/* Field: Debugger Requests: Memory used */
+/* Field: Debugger: Requests: Memory used */
 $handler->display->display_options['fields']['memory']['id'] = 'memory';
 $handler->display->display_options['fields']['memory']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['memory']['field'] = 'memory';
@@ -327,7 +327,7 @@ $handler->display->display_options['fields']['memory']['alter']['html'] = 0;
 $handler->display->display_options['fields']['memory']['hide_empty'] = 0;
 $handler->display->display_options['fields']['memory']['empty_zero'] = 0;
 $handler->display->display_options['fields']['memory']['format_plural'] = 0;
-/* Field: Debugger Requests: Number of SQL queries */
+/* Field: Debugger: Requests: Number of SQL queries */
 $handler->display->display_options['fields']['num_sql']['id'] = 'num_sql';
 $handler->display->display_options['fields']['num_sql']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['num_sql']['field'] = 'num_sql';
@@ -343,7 +343,7 @@ $handler->display->display_options['fields']['num_sql']['alter']['html'] = 0;
 $handler->display->display_options['fields']['num_sql']['hide_empty'] = 0;
 $handler->display->display_options['fields']['num_sql']['empty_zero'] = 0;
 $handler->display->display_options['fields']['num_sql']['format_plural'] = 0;
-/* Field: Debugger Requests: Number of ticks */
+/* Field: Debugger: Requests: Number of ticks */
 $handler->display->display_options['fields']['num_ticks']['id'] = 'num_ticks';
 $handler->display->display_options['fields']['num_ticks']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['num_ticks']['field'] = 'num_ticks';
@@ -359,7 +359,7 @@ $handler->display->display_options['fields']['num_ticks']['alter']['html'] = 0;
 $handler->display->display_options['fields']['num_ticks']['hide_empty'] = 0;
 $handler->display->display_options['fields']['num_ticks']['empty_zero'] = 0;
 $handler->display->display_options['fields']['num_ticks']['format_plural'] = 0;
-/* Field: Debugger Requests: Number of error messages */
+/* Field: Debugger: Requests: Number of error messages */
 $handler->display->display_options['fields']['num_err']['id'] = 'num_err';
 $handler->display->display_options['fields']['num_err']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['num_err']['field'] = 'num_err';
@@ -375,7 +375,7 @@ $handler->display->display_options['fields']['num_err']['alter']['html'] = 0;
 $handler->display->display_options['fields']['num_err']['hide_empty'] = 0;
 $handler->display->display_options['fields']['num_err']['empty_zero'] = 0;
 $handler->display->display_options['fields']['num_err']['format_plural'] = 0;
-/* Field: Debugger Requests: Number of warning messages */
+/* Field: Debugger: Requests: Number of warning messages */
 $handler->display->display_options['fields']['num_warn']['id'] = 'num_warn';
 $handler->display->display_options['fields']['num_warn']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['num_warn']['field'] = 'num_warn';
@@ -391,7 +391,7 @@ $handler->display->display_options['fields']['num_warn']['alter']['html'] = 0;
 $handler->display->display_options['fields']['num_warn']['hide_empty'] = 0;
 $handler->display->display_options['fields']['num_warn']['empty_zero'] = 0;
 $handler->display->display_options['fields']['num_warn']['format_plural'] = 0;
-/* Field: Debugger Requests: Number of notice messages */
+/* Field: Debugger: Requests: Number of notice messages */
 $handler->display->display_options['fields']['num_notices']['id'] = 'num_notices';
 $handler->display->display_options['fields']['num_notices']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['num_notices']['field'] = 'num_notices';
@@ -407,7 +407,7 @@ $handler->display->display_options['fields']['num_notices']['alter']['html'] = 0
 $handler->display->display_options['fields']['num_notices']['hide_empty'] = 0;
 $handler->display->display_options['fields']['num_notices']['empty_zero'] = 0;
 $handler->display->display_options['fields']['num_notices']['format_plural'] = 0;
-/* Field: Debugger Requests: Timestamp */
+/* Field: Debugger: Requests: Timestamp */
 $handler->display->display_options['fields']['timestamp']['id'] = 'timestamp';
 $handler->display->display_options['fields']['timestamp']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['timestamp']['field'] = 'timestamp';

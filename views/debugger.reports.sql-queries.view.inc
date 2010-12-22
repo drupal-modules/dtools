@@ -52,7 +52,7 @@ $handler->display->display_options['empty']['area']['field'] = 'area';
 $handler->display->display_options['empty']['area']['label'] = 'Empty data';
 $handler->display->display_options['empty']['area']['empty'] = FALSE;
 $handler->display->display_options['empty']['area']['content'] = 'No data.';
-/* Field: Debugger SQL Queries: Query ID */
+/* Field: Debugger: SQL Queries: Query ID */
 $handler->display->display_options['fields']['qid']['id'] = 'qid';
 $handler->display->display_options['fields']['qid']['table'] = 'debugger_sql_queries';
 $handler->display->display_options['fields']['qid']['field'] = 'qid';
@@ -66,7 +66,7 @@ $handler->display->display_options['fields']['qid']['alter']['strip_tags'] = 0;
 $handler->display->display_options['fields']['qid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['qid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['qid']['empty_zero'] = 0;
-/* Field: Debugger SQL Queries: Function ID */
+/* Field: Debugger: SQL Queries: Function ID */
 $handler->display->display_options['fields']['fncid']['id'] = 'fncid';
 $handler->display->display_options['fields']['fncid']['table'] = 'debugger_sql_queries';
 $handler->display->display_options['fields']['fncid']['field'] = 'fncid';
@@ -80,7 +80,7 @@ $handler->display->display_options['fields']['fncid']['alter']['strip_tags'] = 0
 $handler->display->display_options['fields']['fncid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['fncid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['fncid']['empty_zero'] = 0;
-/* Field: Debugger SQL Queries: Execution time */
+/* Field: Debugger: SQL Queries: Execution time */
 $handler->display->display_options['fields']['time']['id'] = 'time';
 $handler->display->display_options['fields']['time']['table'] = 'debugger_sql_queries';
 $handler->display->display_options['fields']['time']['field'] = 'time';
@@ -99,7 +99,7 @@ $handler->display->display_options['fields']['time']['format_plural'] = 0;
 /* Display: Debugger: SQL Queries */
 $handler = $view->new_display('page', 'Debugger: SQL Queries', 'page_1');
 $handler->display->display_options['path'] = 'admin/reports/debugger/sql_queries';
-$handler->display->display_options['menu']['type'] = 'normal';
-$handler->display->display_options['menu']['title'] = 'Debugger: SQL Queries';
+$handler->display->display_options['menu']['type'] = 'tab';
+$handler->display->display_options['menu']['title'] = 'SQL';
 $handler->display->display_options['menu']['weight'] = '0';
 

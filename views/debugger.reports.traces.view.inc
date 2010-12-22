@@ -106,6 +106,13 @@ $handler->display->display_options['style_options']['info'] = array(
 $handler->display->display_options['style_options']['override'] = 1;
 $handler->display->display_options['style_options']['sticky'] = 1;
 $handler->display->display_options['style_options']['order'] = 'desc';
+/* Empty text: Global: Text area */
+$handler->display->display_options['empty']['area']['id'] = 'area';
+$handler->display->display_options['empty']['area']['table'] = 'views';
+$handler->display->display_options['empty']['area']['field'] = 'area';
+$handler->display->display_options['empty']['area']['label'] = 'Empty data';
+$handler->display->display_options['empty']['area']['empty'] = FALSE;
+$handler->display->display_options['empty']['area']['content'] = 'No traces found.';
 /* Relationship: Debugger: Traces: Request ID */
 $handler->display->display_options['relationships']['rid']['id'] = 'rid';
 $handler->display->display_options['relationships']['rid']['table'] = 'debugger_traces';
@@ -126,7 +133,7 @@ $handler->display->display_options['relationships']['pfncid']['id'] = 'pfncid';
 $handler->display->display_options['relationships']['pfncid']['table'] = 'debugger_traces';
 $handler->display->display_options['relationships']['pfncid']['field'] = 'pfncid';
 $handler->display->display_options['relationships']['pfncid']['required'] = 0;
-/* Relationship: Debugger: Requests: Function ID of menu router callback */
+/* Relationship: Debugger: Requests: Function ID of the menu router callback */
 $handler->display->display_options['relationships']['fncid_1']['id'] = 'fncid_1';
 $handler->display->display_options['relationships']['fncid_1']['table'] = 'debugger_requests';
 $handler->display->display_options['relationships']['fncid_1']['field'] = 'fncid';
@@ -173,6 +180,20 @@ $handler->display->display_options['fields']['name']['alter']['strip_tags'] = 0;
 $handler->display->display_options['fields']['name']['alter']['html'] = 0;
 $handler->display->display_options['fields']['name']['hide_empty'] = 0;
 $handler->display->display_options['fields']['name']['empty_zero'] = 0;
+/* Field: Debugger: Traces: Function ID */
+$handler->display->display_options['fields']['fncid']['id'] = 'fncid';
+$handler->display->display_options['fields']['fncid']['table'] = 'debugger_traces';
+$handler->display->display_options['fields']['fncid']['field'] = 'fncid';
+$handler->display->display_options['fields']['fncid']['alter']['alter_text'] = 0;
+$handler->display->display_options['fields']['fncid']['alter']['make_link'] = 0;
+$handler->display->display_options['fields']['fncid']['alter']['absolute'] = 0;
+$handler->display->display_options['fields']['fncid']['alter']['trim'] = 0;
+$handler->display->display_options['fields']['fncid']['alter']['word_boundary'] = 1;
+$handler->display->display_options['fields']['fncid']['alter']['ellipsis'] = 1;
+$handler->display->display_options['fields']['fncid']['alter']['strip_tags'] = 0;
+$handler->display->display_options['fields']['fncid']['alter']['html'] = 0;
+$handler->display->display_options['fields']['fncid']['hide_empty'] = 0;
+$handler->display->display_options['fields']['fncid']['empty_zero'] = 0;
 /* Field: Debugger: Traces: Function ID of parent */
 $handler->display->display_options['fields']['pfncid']['id'] = 'pfncid';
 $handler->display->display_options['fields']['pfncid']['table'] = 'debugger_traces';
@@ -278,11 +299,56 @@ $handler->display->display_options['fields']['name_2']['alter']['strip_tags'] = 
 $handler->display->display_options['fields']['name_2']['alter']['html'] = 0;
 $handler->display->display_options['fields']['name_2']['hide_empty'] = 0;
 $handler->display->display_options['fields']['name_2']['empty_zero'] = 0;
+/* Filter: Debugger: Files: Module */
+$handler->display->display_options['filters']['module']['id'] = 'module';
+$handler->display->display_options['filters']['module']['table'] = 'debugger_files';
+$handler->display->display_options['filters']['module']['field'] = 'module';
+$handler->display->display_options['filters']['module']['relationship'] = 'fid';
+$handler->display->display_options['filters']['module']['operator'] = 'not in';
+$handler->display->display_options['filters']['module']['exposed'] = TRUE;
+$handler->display->display_options['filters']['module']['expose']['operator'] = 'module_op';
+$handler->display->display_options['filters']['module']['expose']['label'] = 'Module';
+$handler->display->display_options['filters']['module']['expose']['use_operator'] = 1;
+$handler->display->display_options['filters']['module']['expose']['identifier'] = 'module';
+$handler->display->display_options['filters']['module']['expose']['single'] = 0;
+$handler->display->display_options['filters']['module']['expose']['reduce'] = 0;
 
 /* Display: Debugger: Traces */
 $handler = $view->new_display('page', 'Debugger: Traces', 'page_1');
 $handler->display->display_options['path'] = 'admin/reports/debugger/traces';
-$handler->display->display_options['menu']['type'] = 'normal';
-$handler->display->display_options['menu']['title'] = 'Debugger: Traces';
+$handler->display->display_options['menu']['type'] = 'tab';
+$handler->display->display_options['menu']['title'] = 'Traces';
 $handler->display->display_options['menu']['weight'] = '0';
+
+/* Display: Traces by function */
+$handler = $view->new_display('page', 'Traces by function', 'page_2');
+$handler->display->display_options['defaults']['arguments'] = FALSE;
+/* Argument: Debugger: Functions: Function name */
+$handler->display->display_options['arguments']['name']['id'] = 'name';
+$handler->display->display_options['arguments']['name']['table'] = 'debugger_functions';
+$handler->display->display_options['arguments']['name']['field'] = 'name';
+$handler->display->display_options['arguments']['name']['relationship'] = 'fncid';
+$handler->display->display_options['arguments']['name']['style_plugin'] = 'default_summary';
+$handler->display->display_options['arguments']['name']['default_argument_type'] = 'fixed';
+$handler->display->display_options['arguments']['name']['glossary'] = 0;
+$handler->display->display_options['arguments']['name']['ignorecase'] = 0;
+$handler->display->display_options['arguments']['name']['limit'] = '0';
+$handler->display->display_options['arguments']['name']['transform_dash'] = 0;
+$handler->display->display_options['path'] = 'admin/reports/debugger/traces/function';
+
+/* Display: Traces by path */
+$handler = $view->new_display('page', 'Traces by path', 'page_3');
+$handler->display->display_options['defaults']['arguments'] = FALSE;
+/* Argument: Debugger: Requests: Path */
+$handler->display->display_options['arguments']['path']['id'] = 'path';
+$handler->display->display_options['arguments']['path']['table'] = 'debugger_requests';
+$handler->display->display_options['arguments']['path']['field'] = 'path';
+$handler->display->display_options['arguments']['path']['relationship'] = 'rid';
+$handler->display->display_options['arguments']['path']['style_plugin'] = 'default_summary';
+$handler->display->display_options['arguments']['path']['default_argument_type'] = 'fixed';
+$handler->display->display_options['arguments']['path']['glossary'] = 0;
+$handler->display->display_options['arguments']['path']['ignorecase'] = 0;
+$handler->display->display_options['arguments']['path']['limit'] = '0';
+$handler->display->display_options['arguments']['path']['transform_dash'] = 0;
+$handler->display->display_options['path'] = 'admin/reports/debugger/traces/path';
 
