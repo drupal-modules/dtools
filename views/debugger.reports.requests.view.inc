@@ -1,11 +1,6 @@
 <?php
 // $Id$
 
-/**
- * Exported View in Reports
- *
- */
-
 $view = new view;
 $view->name = 'debugger_requests';
 $view->description = 'Debugger: Requests';
