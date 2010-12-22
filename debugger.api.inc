@@ -87,7 +87,7 @@ function debugger_api_db_finish_request($options = array()) {
   $slow_fncid = reset(current($traces['fncid_slow']));// function which was the slowest
   // $slow_qid = // TODO: SQL query which was the slowest
   $time = timer_stop('debugger');
-  $total_memory = function_exists('memory_get_peak_usage') ? memory_get_peak_usage() : memory_get_usage();
+  $memory = function_exists('memory_get_peak_usage') ? memory_get_peak_usage() : memory_get_usage();
   $num_sql = count($queries);
   $num_ticks = reset(debugger_tick(TRUE));
   $num_err = count($errors['error']) + count($errors['parse error']);
@@ -112,7 +112,7 @@ function debugger_api_db_finish_request($options = array()) {
       `num_notices` = '%d',
       `options` = '%s'
     WHERE `rid` = '%d'
-      ", $rpath, $fid, $fncid, $mem_fncid, $slow_fncid, $slow_qid, $time, $memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices, serialize($options), $request_id);
+      ", $rpath, $fid, $fncid, $mem_fncid, $slow_fncid, $slow_qid, $time['time'], $memory, $num_sql, $num_ticks, $num_err, $num_warn, $num_notices, serialize($options), $request_id);
 }
 
 /**
@@ -249,9 +249,10 @@ function debugger_api_drupal_error_handler($errno, $message, $filename, $line, $
  * Clear debugger related data from tables
  */
 function debugger_api_clear_data() {
-  db_query("TRUNCATE TABLE {debugger_files}");
   db_query("TRUNCATE TABLE {debugger_traces}");
-  db_query("TRUNCATE TABLE {debugger_functions}");
   db_query("TRUNCATE TABLE {debugger_requests}");
+  db_query("TRUNCATE TABLE {debugger_functions}");
+  db_query("TRUNCATE TABLE {debugger_files}");
+  db_query("TRUNCATE TABLE {debugger_sql_queries}");
 }
 

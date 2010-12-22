@@ -92,3 +92,22 @@ function debugger_set_time_limit($limit = 60) {
     set_time_limit($limit);
   }
 }
+
+/**
+ * Get list of traced modules
+ */
+function debugger_module_list() {
+  $list = array_filter(explode(',', db_result(db_query('SELECT GROUP_CONCAT(DISTINCT module) module FROM {debugger_files} ORDER BY module'))));
+  asort($list);
+  return $list;
+}
+
+/**
+ * Get list of functions
+ */
+function debugger_function_list() {
+  $list = array_filter(explode(',', db_result(db_query('SELECT GROUP_CONCAT(DISTINCT name) module FROM {debugger_functions}'))));
+  asort($list);
+  return $list;
+}
+
