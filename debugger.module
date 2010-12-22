@@ -12,7 +12,6 @@
  */
 
 define('D_MIN_TIMER', 0.01);
-define('D_SAVE_COUNTER', 1);
 
 require_once 'debugger.api.inc'; // load API functions
 /*
@@ -154,9 +153,12 @@ function debugger_shutdown() {
  * Helper function to check if debugger should be enabled on the current page
  */
 function debugger_enabled() {
-  $path = explode('/', $_GET['q']);
-  $res = variable_get('debugger_enable', FALSE) && (!($path[0] == 'admin') || variable_get('debugger_enable_admin', FALSE));
-  return $res;
+  static $debugger_enabled = FALSE;
+  if (!$debugger_enabled) {
+    $path = explode('/', $_GET['q']);
+    $debugger_enabled = variable_get('debugger_enable', FALSE) && (!($path[0] == 'admin') || variable_get('debugger_enable_admin', FALSE));
+  }
+  return $debugger_enabled;
 }
 
 /**
@@ -182,13 +184,19 @@ function debugger_check_curr_path() {
  */ 
 function debugger_tick($ticks = FALSE) {
   static $tick_counter = 0;
-  global $last_timer, $last_memory; // $debugger_trace
+  static $last_timer = 0, $last_memory = 0; // $debugger_trace
   /* CALCULATE RESOURCES FROM THE LAST TIME */
   $curr_timer = microtime(TRUE);
   $curr_memory = function_exists('memory_get_peak_usage') ? memory_get_peak_usage() : memory_get_usage();
-  $time = (float)$curr_timer-$last_timer;
-  $memory = (float)$curr_memory-$last_memory;
-  if ($time > (float)D_MIN_TIMER) {
+  if ($last_timer && $last_memory) {
+    $time = (float)$curr_timer-$last_timer;
+    $memory = (float)$curr_memory-$last_memory;
+  } else {
+    $time = $memory = 0;
+    $last_timer = $curr_timer;
+    $last_memory = $curr_memory;
+  }
+  if ($time >= (float)variable_get('debugger_precision_time', 0.01)) {
     debugger_api_register_backtrace(debug_backtrace(TRUE), $time, $memory, $tick_counter++, 2);
     $last_timer = $curr_timer;
     $last_memory = $curr_memory;
@@ -198,5 +206,4 @@ function debugger_tick($ticks = FALSE) {
   }
   $tick_counter++; 
 }
-
 

@@ -103,6 +103,18 @@ function debugger_module_list() {
 }
 
 /**
+ * Get list of rows from table
+ * Note:
+ *   Feature of passing arguments has been implemented in Views on December 16, 2010 (http://drupal.org/node/927270)
+ *   Please upgrade to recent Views if you see some missing argument errors.
+ */
+function debugger_make_list($field = 'rpath', $table_name = 'requests') {
+  $list = array_filter(explode(',', db_result(db_query("SELECT GROUP_CONCAT(DISTINCT `%s`) module FROM {debugger_%s}", $field, $table_name))));
+  asort($list);
+  return $list;
+}
+
+/**
  * Get list of functions
  */
 function debugger_function_list() {

@@ -96,6 +96,12 @@ function debugger_views_data() {
     'argument' => array(
       'handler' => 'views_handler_argument_string',
     ),
+    'filter' => array(
+      'help'    => t('Filter by path'),
+      'handler' => 'views_handler_filter_in_operator',
+      'options callback' => 'debugger_make_list',
+      'options arguments' => array('path', 'requests'),
+    ),
     'sort' => array(
       'help' => t('Sort by path'),
       'handler' => 'views_handler_sort',
@@ -109,6 +115,12 @@ function debugger_views_data() {
     ),
     'argument' => array(
       'handler' => 'views_handler_argument_string',
+    ),
+    'filter' => array(
+      'help'    => t('Filter by path'),
+      'handler' => 'views_handler_filter_in_operator',
+      'options callback' => 'debugger_make_list',
+      'options arguments' => array('rpath', 'requests'),
     ),
     'sort' => array(
       'help' => t('Sort by router path'),
@@ -261,6 +273,10 @@ function debugger_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'help'    => t('Filter by memory'),
+      'handler' => 'views_handler_filter_numeric',
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
@@ -504,6 +520,7 @@ function debugger_views_data() {
       'help'    => t('Filter by module name'),
       'handler' => 'views_handler_filter_in_operator',
       'options callback' => 'debugger_module_list',
+      // 'options arguments' => array('module', 'files'),
     ),
     'sort' => array(
       'help' => t('Sort by module name of the file'),
@@ -727,7 +744,7 @@ function debugger_views_data() {
       'handler' => 'views_handler_relationship',
       'base' => 'debugger_requests',
       'relationship field' => 'rid',
-      'label' => t('Debugger: Request'),
+      'label' => t('Debugger: Request ID'),
     ),
   );
   $data['debugger_traces']['time_delta'] = array(
@@ -736,6 +753,10 @@ function debugger_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'help'    => t('Filter by time of the trace'),
+      'handler' => 'views_handler_filter_float',
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
@@ -747,6 +768,10 @@ function debugger_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'help'    => t('Filter by memory of the trace'),
+      'handler' => 'views_handler_filter_numeric',
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
