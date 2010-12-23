@@ -36,9 +36,6 @@ function debugger_boot() {
     } else if (variable_get('dev_query', TRUE)) {
       variable_set('dev_query', FALSE);
     }
-    if (variable_get('debugger_enable_error_handler', TRUE)) {
-      set_error_handler('debugger_api_drupal_error_handler');
-    }
     register_tick_function('debugger_tick'); // ACTIVATE debugger; if crashing, see: http://php.net/register_tick_function
     /* change default PHP time limit */
     require_once 'debugger.inc'; // include additional functions
