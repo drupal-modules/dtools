@@ -41,7 +41,7 @@ function debugger_boot() {
     }
     register_tick_function('debugger_tick'); // ACTIVATE debugger; if crashing, see: http://php.net/register_tick_function
     /* change default PHP time limit */
-    module_load_include('inc', 'debugger'); // include additional functions
+    require_once 'debugger.inc'; // include additional functions
     debugger_set_time_limit(60);
   }
 }
