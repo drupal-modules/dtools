@@ -2,7 +2,7 @@
 // $Id$
 
 $view = new view;
-$view->name = 'debugger_requests';
+$view->name = 'Requests';
 $view->description = 'Debugger: Requests';
 $view->tag = 'debugger';
 $view->view_php = '';
@@ -19,17 +19,21 @@ $handler->display->display_options['cache']['type'] = 'none';
 $handler->display->display_options['query']['type'] = 'views_query';
 $handler->display->display_options['exposed_form']['type'] = 'basic';
 $handler->display->display_options['pager']['type'] = 'full';
+$handler->display->display_options['pager']['options']['items_per_page'] = '50';
+$handler->display->display_options['pager']['options']['offset'] = '0';
+$handler->display->display_options['pager']['options']['id'] = '0';
+$handler->display->display_options['pager']['options']['expose']['items_per_page'] = TRUE;
+$handler->display->display_options['pager']['options']['expose']['items_per_page_options'] = '10, 20, 50, 100, 200, 500';
 $handler->display->display_options['style_plugin'] = 'table';
 $handler->display->display_options['style_options']['columns'] = array(
   'rid' => 'rid',
   'path' => 'path',
   'rpath' => 'rpath',
-  'fid' => 'fid',
-  'fncid' => 'fncid',
-  'mem_fncid' => 'mem_fncid',
-  'slow_fncid' => 'slow_fncid',
-  'slow_qid' => 'slow_qid',
+  'name' => 'name',
   'query' => 'query',
+  'name_1' => 'name_1',
+  'name_2' => 'name_2',
+  'slow_qid' => 'slow_qid',
   'uid' => 'uid',
   'time' => 'time',
   'memory' => 'memory',
@@ -40,7 +44,7 @@ $handler->display->display_options['style_options']['columns'] = array(
   'num_notices' => 'num_notices',
   'timestamp' => 'timestamp',
 );
-$handler->display->display_options['style_options']['default'] = 'timestamp';
+$handler->display->display_options['style_options']['default'] = 'rid';
 $handler->display->display_options['style_options']['info'] = array(
   'rid' => array(
     'sortable' => 1,
@@ -56,32 +60,27 @@ $handler->display->display_options['style_options']['info'] = array(
     'align' => '',
     'separator' => '',
   ),
-  'fid' => array(
-    'sortable' => 1,
-    'align' => '',
-    'separator' => '',
-  ),
-  'fncid' => array(
-    'sortable' => 1,
-    'align' => '',
-    'separator' => '',
-  ),
-  'mem_fncid' => array(
-    'sortable' => 1,
-    'align' => '',
-    'separator' => '',
-  ),
-  'slow_fncid' => array(
-    'sortable' => 1,
-    'align' => '',
-    'separator' => '',
-  ),
-  'slow_qid' => array(
+  'name' => array(
     'sortable' => 1,
     'align' => '',
     'separator' => '',
   ),
   'query' => array(
+    'sortable' => 1,
+    'align' => '',
+    'separator' => '',
+  ),
+  'name_1' => array(
+    'sortable' => 1,
+    'align' => '',
+    'separator' => '',
+  ),
+  'name_2' => array(
+    'sortable' => 1,
+    'align' => '',
+    'separator' => '',
+  ),
+  'slow_qid' => array(
     'sortable' => 1,
     'align' => '',
     'separator' => '',
@@ -135,13 +134,22 @@ $handler->display->display_options['style_options']['info'] = array(
 $handler->display->display_options['style_options']['override'] = 1;
 $handler->display->display_options['style_options']['sticky'] = 0;
 $handler->display->display_options['style_options']['order'] = 'desc';
-/* Empty text: Global: Text area */
-$handler->display->display_options['empty']['area']['id'] = 'area';
-$handler->display->display_options['empty']['area']['table'] = 'views';
-$handler->display->display_options['empty']['area']['field'] = 'area';
-$handler->display->display_options['empty']['area']['label'] = 'Empty data';
-$handler->display->display_options['empty']['area']['empty'] = FALSE;
-$handler->display->display_options['empty']['area']['content'] = 'No data.';
+/* Relationship: Debugger: Requests: Function ID of the menu router callback */
+$handler->display->display_options['relationships']['fncid']['id'] = 'fncid';
+$handler->display->display_options['relationships']['fncid']['table'] = 'debugger_requests';
+$handler->display->display_options['relationships']['fncid']['field'] = 'fncid';
+$handler->display->display_options['relationships']['fncid']['label'] = 'Debugger: Function ID of menu callback';
+$handler->display->display_options['relationships']['fncid']['required'] = 0;
+/* Relationship: Debugger: Requests: Function ID which used the most memory */
+$handler->display->display_options['relationships']['mem_fncid']['id'] = 'mem_fncid';
+$handler->display->display_options['relationships']['mem_fncid']['table'] = 'debugger_requests';
+$handler->display->display_options['relationships']['mem_fncid']['field'] = 'mem_fncid';
+$handler->display->display_options['relationships']['mem_fncid']['required'] = 0;
+/* Relationship: Debugger: Requests: Function ID which was the slowest */
+$handler->display->display_options['relationships']['slow_fncid']['id'] = 'slow_fncid';
+$handler->display->display_options['relationships']['slow_fncid']['table'] = 'debugger_requests';
+$handler->display->display_options['relationships']['slow_fncid']['field'] = 'slow_fncid';
+$handler->display->display_options['relationships']['slow_fncid']['required'] = 0;
 /* Field: Debugger: Requests: Request ID */
 $handler->display->display_options['fields']['rid']['id'] = 'rid';
 $handler->display->display_options['fields']['rid']['table'] = 'debugger_requests';
@@ -162,9 +170,11 @@ $handler->display->display_options['fields']['path']['id'] = 'path';
 $handler->display->display_options['fields']['path']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['path']['field'] = 'path';
 $handler->display->display_options['fields']['path']['alter']['alter_text'] = 0;
-$handler->display->display_options['fields']['path']['alter']['make_link'] = 0;
+$handler->display->display_options['fields']['path']['alter']['make_link'] = 1;
+$handler->display->display_options['fields']['path']['alter']['path'] = 'admin/reports/debugger/path/[path]';
 $handler->display->display_options['fields']['path']['alter']['absolute'] = 0;
-$handler->display->display_options['fields']['path']['alter']['trim'] = 0;
+$handler->display->display_options['fields']['path']['alter']['trim'] = 1;
+$handler->display->display_options['fields']['path']['alter']['max_length'] = '15';
 $handler->display->display_options['fields']['path']['alter']['word_boundary'] = 1;
 $handler->display->display_options['fields']['path']['alter']['ellipsis'] = 1;
 $handler->display->display_options['fields']['path']['alter']['strip_tags'] = 0;
@@ -178,72 +188,85 @@ $handler->display->display_options['fields']['rpath']['field'] = 'rpath';
 $handler->display->display_options['fields']['rpath']['alter']['alter_text'] = 0;
 $handler->display->display_options['fields']['rpath']['alter']['make_link'] = 0;
 $handler->display->display_options['fields']['rpath']['alter']['absolute'] = 0;
-$handler->display->display_options['fields']['rpath']['alter']['trim'] = 0;
+$handler->display->display_options['fields']['rpath']['alter']['trim'] = 1;
+$handler->display->display_options['fields']['rpath']['alter']['max_length'] = '15';
 $handler->display->display_options['fields']['rpath']['alter']['word_boundary'] = 1;
 $handler->display->display_options['fields']['rpath']['alter']['ellipsis'] = 1;
 $handler->display->display_options['fields']['rpath']['alter']['strip_tags'] = 0;
 $handler->display->display_options['fields']['rpath']['alter']['html'] = 0;
 $handler->display->display_options['fields']['rpath']['hide_empty'] = 0;
 $handler->display->display_options['fields']['rpath']['empty_zero'] = 0;
-/* Field: Broken/missing handler */
-$handler->display->display_options['fields']['fid']['id'] = 'fid';
-$handler->display->display_options['fields']['fid']['table'] = 'debugger_requests';
-$handler->display->display_options['fields']['fid']['field'] = 'fid';
-$handler->display->display_options['fields']['fid']['alter']['alter_text'] = 0;
-$handler->display->display_options['fields']['fid']['alter']['make_link'] = 0;
-$handler->display->display_options['fields']['fid']['alter']['absolute'] = 0;
-$handler->display->display_options['fields']['fid']['alter']['trim'] = 0;
-$handler->display->display_options['fields']['fid']['alter']['word_boundary'] = 1;
-$handler->display->display_options['fields']['fid']['alter']['ellipsis'] = 1;
-$handler->display->display_options['fields']['fid']['alter']['strip_tags'] = 0;
-$handler->display->display_options['fields']['fid']['alter']['html'] = 0;
-$handler->display->display_options['fields']['fid']['hide_empty'] = 0;
-$handler->display->display_options['fields']['fid']['empty_zero'] = 0;
-/* Field: Debugger: Requests: Function ID of the menu router callback */
-$handler->display->display_options['fields']['fncid']['id'] = 'fncid';
-$handler->display->display_options['fields']['fncid']['table'] = 'debugger_requests';
-$handler->display->display_options['fields']['fncid']['field'] = 'fncid';
-$handler->display->display_options['fields']['fncid']['label'] = 'Function ID';
-$handler->display->display_options['fields']['fncid']['alter']['alter_text'] = 0;
-$handler->display->display_options['fields']['fncid']['alter']['make_link'] = 0;
-$handler->display->display_options['fields']['fncid']['alter']['absolute'] = 0;
-$handler->display->display_options['fields']['fncid']['alter']['trim'] = 0;
-$handler->display->display_options['fields']['fncid']['alter']['word_boundary'] = 1;
-$handler->display->display_options['fields']['fncid']['alter']['ellipsis'] = 1;
-$handler->display->display_options['fields']['fncid']['alter']['strip_tags'] = 0;
-$handler->display->display_options['fields']['fncid']['alter']['html'] = 0;
-$handler->display->display_options['fields']['fncid']['hide_empty'] = 0;
-$handler->display->display_options['fields']['fncid']['empty_zero'] = 0;
-/* Field: Debugger: Requests: Function ID which used the most memory */
-$handler->display->display_options['fields']['mem_fncid']['id'] = 'mem_fncid';
-$handler->display->display_options['fields']['mem_fncid']['table'] = 'debugger_requests';
-$handler->display->display_options['fields']['mem_fncid']['field'] = 'mem_fncid';
-$handler->display->display_options['fields']['mem_fncid']['label'] = 'Function ID (most memory)';
-$handler->display->display_options['fields']['mem_fncid']['alter']['alter_text'] = 0;
-$handler->display->display_options['fields']['mem_fncid']['alter']['make_link'] = 0;
-$handler->display->display_options['fields']['mem_fncid']['alter']['absolute'] = 0;
-$handler->display->display_options['fields']['mem_fncid']['alter']['trim'] = 0;
-$handler->display->display_options['fields']['mem_fncid']['alter']['word_boundary'] = 1;
-$handler->display->display_options['fields']['mem_fncid']['alter']['ellipsis'] = 1;
-$handler->display->display_options['fields']['mem_fncid']['alter']['strip_tags'] = 0;
-$handler->display->display_options['fields']['mem_fncid']['alter']['html'] = 0;
-$handler->display->display_options['fields']['mem_fncid']['hide_empty'] = 0;
-$handler->display->display_options['fields']['mem_fncid']['empty_zero'] = 0;
-/* Field: Debugger: Requests: Function ID which was the slowest */
-$handler->display->display_options['fields']['slow_fncid']['id'] = 'slow_fncid';
-$handler->display->display_options['fields']['slow_fncid']['table'] = 'debugger_requests';
-$handler->display->display_options['fields']['slow_fncid']['field'] = 'slow_fncid';
-$handler->display->display_options['fields']['slow_fncid']['label'] = 'Function ID (the slowest)';
-$handler->display->display_options['fields']['slow_fncid']['alter']['alter_text'] = 0;
-$handler->display->display_options['fields']['slow_fncid']['alter']['make_link'] = 0;
-$handler->display->display_options['fields']['slow_fncid']['alter']['absolute'] = 0;
-$handler->display->display_options['fields']['slow_fncid']['alter']['trim'] = 0;
-$handler->display->display_options['fields']['slow_fncid']['alter']['word_boundary'] = 1;
-$handler->display->display_options['fields']['slow_fncid']['alter']['ellipsis'] = 1;
-$handler->display->display_options['fields']['slow_fncid']['alter']['strip_tags'] = 0;
-$handler->display->display_options['fields']['slow_fncid']['alter']['html'] = 0;
-$handler->display->display_options['fields']['slow_fncid']['hide_empty'] = 0;
-$handler->display->display_options['fields']['slow_fncid']['empty_zero'] = 0;
+/* Field: Debugger: Functions: Function name */
+$handler->display->display_options['fields']['name']['id'] = 'name';
+$handler->display->display_options['fields']['name']['table'] = 'debugger_functions';
+$handler->display->display_options['fields']['name']['field'] = 'name';
+$handler->display->display_options['fields']['name']['relationship'] = 'fncid';
+$handler->display->display_options['fields']['name']['label'] = 'Function page callback';
+$handler->display->display_options['fields']['name']['alter']['alter_text'] = 0;
+$handler->display->display_options['fields']['name']['alter']['make_link'] = 1;
+$handler->display->display_options['fields']['name']['alter']['path'] = 'admin/reports/debugger/traces/function/[name]';
+$handler->display->display_options['fields']['name']['alter']['absolute'] = 0;
+$handler->display->display_options['fields']['name']['alter']['trim'] = 1;
+$handler->display->display_options['fields']['name']['alter']['max_length'] = '20';
+$handler->display->display_options['fields']['name']['alter']['word_boundary'] = 0;
+$handler->display->display_options['fields']['name']['alter']['ellipsis'] = 1;
+$handler->display->display_options['fields']['name']['alter']['strip_tags'] = 0;
+$handler->display->display_options['fields']['name']['alter']['html'] = 0;
+$handler->display->display_options['fields']['name']['empty'] = '(non-existing)';
+$handler->display->display_options['fields']['name']['hide_empty'] = 0;
+$handler->display->display_options['fields']['name']['empty_zero'] = 1;
+/* Field: Debugger: Requests: Query path */
+$handler->display->display_options['fields']['query']['id'] = 'query';
+$handler->display->display_options['fields']['query']['table'] = 'debugger_requests';
+$handler->display->display_options['fields']['query']['field'] = 'query';
+$handler->display->display_options['fields']['query']['label'] = 'Query';
+$handler->display->display_options['fields']['query']['alter']['alter_text'] = 0;
+$handler->display->display_options['fields']['query']['alter']['make_link'] = 0;
+$handler->display->display_options['fields']['query']['alter']['absolute'] = 0;
+$handler->display->display_options['fields']['query']['alter']['trim'] = 1;
+$handler->display->display_options['fields']['query']['alter']['max_length'] = '15';
+$handler->display->display_options['fields']['query']['alter']['word_boundary'] = 1;
+$handler->display->display_options['fields']['query']['alter']['ellipsis'] = 1;
+$handler->display->display_options['fields']['query']['alter']['strip_tags'] = 0;
+$handler->display->display_options['fields']['query']['alter']['html'] = 0;
+$handler->display->display_options['fields']['query']['hide_empty'] = 0;
+$handler->display->display_options['fields']['query']['empty_zero'] = 0;
+/* Field: Debugger: Functions: Function name */
+$handler->display->display_options['fields']['name_1']['id'] = 'name_1';
+$handler->display->display_options['fields']['name_1']['table'] = 'debugger_functions';
+$handler->display->display_options['fields']['name_1']['field'] = 'name';
+$handler->display->display_options['fields']['name_1']['relationship'] = 'mem_fncid';
+$handler->display->display_options['fields']['name_1']['label'] = 'Function (the most memory)';
+$handler->display->display_options['fields']['name_1']['alter']['alter_text'] = 0;
+$handler->display->display_options['fields']['name_1']['alter']['make_link'] = 1;
+$handler->display->display_options['fields']['name_1']['alter']['path'] = 'admin/reports/debugger/traces/function/[name_1]';
+$handler->display->display_options['fields']['name_1']['alter']['absolute'] = 0;
+$handler->display->display_options['fields']['name_1']['alter']['trim'] = 1;
+$handler->display->display_options['fields']['name_1']['alter']['max_length'] = '20';
+$handler->display->display_options['fields']['name_1']['alter']['word_boundary'] = 0;
+$handler->display->display_options['fields']['name_1']['alter']['ellipsis'] = 1;
+$handler->display->display_options['fields']['name_1']['alter']['strip_tags'] = 0;
+$handler->display->display_options['fields']['name_1']['alter']['html'] = 0;
+$handler->display->display_options['fields']['name_1']['hide_empty'] = 0;
+$handler->display->display_options['fields']['name_1']['empty_zero'] = 0;
+/* Field: Debugger: Functions: Function name */
+$handler->display->display_options['fields']['name_2']['id'] = 'name_2';
+$handler->display->display_options['fields']['name_2']['table'] = 'debugger_functions';
+$handler->display->display_options['fields']['name_2']['field'] = 'name';
+$handler->display->display_options['fields']['name_2']['relationship'] = 'slow_fncid';
+$handler->display->display_options['fields']['name_2']['label'] = 'Function (the slowest)';
+$handler->display->display_options['fields']['name_2']['alter']['alter_text'] = 0;
+$handler->display->display_options['fields']['name_2']['alter']['make_link'] = 1;
+$handler->display->display_options['fields']['name_2']['alter']['path'] = 'admin/reports/debugger/traces/function/[name_2]';
+$handler->display->display_options['fields']['name_2']['alter']['absolute'] = 0;
+$handler->display->display_options['fields']['name_2']['alter']['trim'] = 1;
+$handler->display->display_options['fields']['name_2']['alter']['max_length'] = '20';
+$handler->display->display_options['fields']['name_2']['alter']['word_boundary'] = 0;
+$handler->display->display_options['fields']['name_2']['alter']['ellipsis'] = 1;
+$handler->display->display_options['fields']['name_2']['alter']['strip_tags'] = 0;
+$handler->display->display_options['fields']['name_2']['alter']['html'] = 0;
+$handler->display->display_options['fields']['name_2']['hide_empty'] = 0;
+$handler->display->display_options['fields']['name_2']['empty_zero'] = 0;
 /* Field: Debugger: Requests: Query ID which was the slowest */
 $handler->display->display_options['fields']['slow_qid']['id'] = 'slow_qid';
 $handler->display->display_options['fields']['slow_qid']['table'] = 'debugger_requests';
@@ -259,21 +282,6 @@ $handler->display->display_options['fields']['slow_qid']['alter']['strip_tags'] 
 $handler->display->display_options['fields']['slow_qid']['alter']['html'] = 0;
 $handler->display->display_options['fields']['slow_qid']['hide_empty'] = 0;
 $handler->display->display_options['fields']['slow_qid']['empty_zero'] = 0;
-/* Field: Debugger: Requests: Query path */
-$handler->display->display_options['fields']['query']['id'] = 'query';
-$handler->display->display_options['fields']['query']['table'] = 'debugger_requests';
-$handler->display->display_options['fields']['query']['field'] = 'query';
-$handler->display->display_options['fields']['query']['label'] = 'Query';
-$handler->display->display_options['fields']['query']['alter']['alter_text'] = 0;
-$handler->display->display_options['fields']['query']['alter']['make_link'] = 0;
-$handler->display->display_options['fields']['query']['alter']['absolute'] = 0;
-$handler->display->display_options['fields']['query']['alter']['trim'] = 0;
-$handler->display->display_options['fields']['query']['alter']['word_boundary'] = 1;
-$handler->display->display_options['fields']['query']['alter']['ellipsis'] = 1;
-$handler->display->display_options['fields']['query']['alter']['strip_tags'] = 0;
-$handler->display->display_options['fields']['query']['alter']['html'] = 0;
-$handler->display->display_options['fields']['query']['hide_empty'] = 0;
-$handler->display->display_options['fields']['query']['empty_zero'] = 0;
 /* Field: User: Uid */
 $handler->display->display_options['fields']['uid']['id'] = 'uid';
 $handler->display->display_options['fields']['uid']['table'] = 'users';
@@ -305,12 +313,14 @@ $handler->display->display_options['fields']['time']['alter']['strip_tags'] = 0;
 $handler->display->display_options['fields']['time']['alter']['html'] = 0;
 $handler->display->display_options['fields']['time']['hide_empty'] = 0;
 $handler->display->display_options['fields']['time']['empty_zero'] = 0;
+$handler->display->display_options['fields']['time']['set_precision'] = 1;
+$handler->display->display_options['fields']['time']['precision'] = '0';
 $handler->display->display_options['fields']['time']['format_plural'] = 0;
+$handler->display->display_options['fields']['time']['suffix'] = 'ms';
 /* Field: Debugger: Requests: Memory used */
 $handler->display->display_options['fields']['memory']['id'] = 'memory';
 $handler->display->display_options['fields']['memory']['table'] = 'debugger_requests';
 $handler->display->display_options['fields']['memory']['field'] = 'memory';
-$handler->display->display_options['fields']['memory']['label'] = 'Memory';
 $handler->display->display_options['fields']['memory']['alter']['alter_text'] = 0;
 $handler->display->display_options['fields']['memory']['alter']['make_link'] = 0;
 $handler->display->display_options['fields']['memory']['alter']['absolute'] = 0;
@@ -322,6 +332,7 @@ $handler->display->display_options['fields']['memory']['alter']['html'] = 0;
 $handler->display->display_options['fields']['memory']['hide_empty'] = 0;
 $handler->display->display_options['fields']['memory']['empty_zero'] = 0;
 $handler->display->display_options['fields']['memory']['format_plural'] = 0;
+$handler->display->display_options['fields']['memory']['suffix'] = 'b';
 /* Field: Debugger: Requests: Number of SQL queries */
 $handler->display->display_options['fields']['num_sql']['id'] = 'num_sql';
 $handler->display->display_options['fields']['num_sql']['table'] = 'debugger_requests';
@@ -421,7 +432,10 @@ $handler->display->display_options['fields']['timestamp']['empty_zero'] = 0;
 /* Display: Requests */
 $handler = $view->new_display('page', 'Requests', 'page_1');
 $handler->display->display_options['path'] = 'admin/reports/debugger/requests';
-$handler->display->display_options['menu']['type'] = 'normal';
-$handler->display->display_options['menu']['title'] = 'Debugger: Requests';
+$handler->display->display_options['menu']['type'] = 'default tab';
+$handler->display->display_options['menu']['title'] = 'Requests';
 $handler->display->display_options['menu']['weight'] = '0';
+$handler->display->display_options['tab_options']['type'] = 'normal';
+$handler->display->display_options['tab_options']['title'] = 'Debugger Data';
+$handler->display->display_options['tab_options']['weight'] = '0';
 
