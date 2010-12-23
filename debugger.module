@@ -197,7 +197,7 @@ function debugger_tick($ticks = FALSE) {
     $last_memory = $curr_memory;
   }
   if ($time >= (float)variable_get('debugger_precision_time', 0.01)) {
-    debugger_api_register_backtrace(debug_backtrace(TRUE), $time, $memory, $tick_counter++, 2);
+    debugger_api_register_backtrace(debug_backtrace(), $time, $memory, $tick_counter++, 2);
     $last_timer = $curr_timer;
     $last_memory = $curr_memory;
   }
