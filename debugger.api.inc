@@ -5,7 +5,6 @@
  *   Include file for API functions
  *
  * @version
- *   $Id$
  *
  * @developers
  *   Rafal Wieczorek <kenorb@gmail.com>

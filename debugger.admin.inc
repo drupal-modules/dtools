@@ -5,7 +5,6 @@
  *   Form with Settings
  *
  * @version
- *   $Id$
  *
  * @developers
  *   Rafal Wieczorek <kenorb@gmail.com>
