@@ -5,7 +5,6 @@
  *   Include file contain additional functions
  *
  * @version
- *   $Id$
  *
  * @developers:
  *   Rafal Wieczorek <kenorb@gmail.com>

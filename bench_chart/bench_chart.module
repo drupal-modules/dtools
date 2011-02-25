@@ -5,7 +5,6 @@
  *   Bench Chart module measure execution time of specified hooks
  *
  * @version
- *   $Id$
  *
  * @developer:
  *    Rafal Wieczorek <kenorb@gmail.com>
