@@ -1,4 +1,3 @@
-; $Id$
 name = "Bench Chart Helper"
 description = "Needed by Bench Chart module"
 package = "Development"

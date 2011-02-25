@@ -1,4 +1,3 @@
-; $Id$
 name = "WSOD (White Screen of Death)"
 description = "Detect white screen of death and diagnoze what's the reason"
 package = "Development"
