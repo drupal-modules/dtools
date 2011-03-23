@@ -158,7 +158,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     // version request
-    if ($_GET['v']) {
+    if (!empty($_GET['v'])) {
       $output .= t('Version:') .  WSOD_ID . $nl;
       $verbose ? print $output : NULL;
       return;
