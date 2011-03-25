@@ -11,6 +11,29 @@
  */
 
 /** 
+ * Validate hooks which should returns the data, but they don't
+ * 
+ * @param string $router_item
+ * @return array or false 
+ */ 
+function wsod_validate_return_hooks($verbose = FALSE, &$output) {
+  /* TODO
+  if (module_exists('views')) {
+    $views = views_get_all_views();
+    $view = current($views); // get any of first view for testing
+    // Let modules modify the view output after it is rendered.
+    $view->execute();
+    module_invoke_all('views_pre_render', $view);
+    foreach (module_implements('views_post_render') as $module) {
+      $function = $module . '_views_post_render';
+      $res = $function($view, $view->display_handler->output);
+    }
+  }
+  */
+  return TRUE;
+}
+
+/** 
  * Validate theme hook files and callbacks
  * 
  * @param string $router_item

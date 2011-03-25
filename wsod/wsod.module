@@ -271,6 +271,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         $output .= t("WSOD detected!").t('&nbsp;') . t("Checking for problems...") . $nl;
         $output .= sprintf(t("ERROR: %s returned empty value!"), 'menu_execute_active_handler()') . $nl;
         /* check theme hooks */
+        $res = wsod_validate_return_hooks($verbose, $output);
         $res = wsod_validate_theme_hooks($verbose, $output);
         if (!$res) {
             if ($fix_on_fly) {
