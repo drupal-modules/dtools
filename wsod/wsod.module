@@ -51,17 +51,7 @@ function wsod_menu() {
   $items['wsod'] = array(
     'title' => 'WSOD',
     'access callback' => 'wsod_check_user',
-    'access arguments' => array(1, 2), // username/password_in_md5
     'page callback' => 'wsod_check_wsod_callback',
-    'page arguments' => array(TRUE),
-    'type' => MENU_CALLBACK,
-  );
-  $items['wsod/%/%'] = array(
-    'title' => 'WSOD',
-    'access callback' => 'wsod_check_user',
-    'access arguments' => array(1, 2), // username/password_in_md5
-    'page callback' => 'wsod_check_wsod_callback',
-    'page arguments' => array(TRUE),
     'type' => MENU_CALLBACK,
   );
   return $items;
@@ -76,12 +66,12 @@ function wsod_menu() {
  * - from shell console: printf your_password | md5
  * - Try: http://md5.md/
  */
-function wsod_check_user($username, $crc_sum) {
+function wsod_check_user() {
   global $user;
   $access = FALSE;
   if (user_access('administer dtools', $user)) {
     $access = TRUE;
-  } else if ($uid = db_result(db_query("SELECT uid FROM {users} WHERE name = '%s' AND pass = '%s'", $username, $crc_sum))) {
+  } else if ($uid = db_result(db_query("SELECT uid FROM {users} WHERE name = '%s' AND pass = '%s'", $_GET['user'], $_GET['pass']))) {
     // Log in user
     $user = user_load(array('uid' => $uid));
     $access = TRUE;
@@ -101,7 +91,7 @@ function wsod_perm() {
  */
 function wsod_check_wsod_callback() {
   wsod_exit(FALSE, FALSE, TRUE);
-  wsod_check_wsod(TRUE);
+  wsod_check_wsod(TRUE, TRUE, TRUE);
 }
 
 /**
@@ -146,7 +136,7 @@ function wsod_theme_registry_alter(&$items) {
  *   returns diagnostics messages
  * 
  */
-function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE, $sess_close = FALSE, $output = '') {
+function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALSE, $sess_close = FALSE, $output = '', $path = 'node') {
     global $drupal_path, $wsod_locked;
 
     $wsod_locked = TRUE;
@@ -182,11 +172,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
         return;
     }
 
-    $path = $_GET['q'];
-    if (arg(0) == 'wsod') {
-      $path = 'node';
-    } if (!$emergency && !variable_get('wsod_live_checking', FALSE) && arg(0) <> 'wsod') {
+    if (!$emergency && !variable_get('wsod_live_checking', FALSE)) {
       return;
+    }
+    if (!empty($_GET['path'])) {
+      $path = $_GET['path'];
+    } elseif (arg(0) <> 'wsod') {
+      $path = $_GET['q'];
     }
    
     // ignore wsod checking on POST forms, it breaking the forms (#416616) (TODO: later it could be supported - )
