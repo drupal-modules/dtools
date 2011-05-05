@@ -149,14 +149,14 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
 
     // version request
     if (!empty($_GET['v'])) {
-      $output .= t('Version:') .  WSOD_ID . $nl;
+      $output .= t('Version:') .  WSOD_ID . NL;
       $verbose ? print $output : NULL;
       return;
     }
 
     // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
     if (wsod_fatal_error_checker($output, $fix_on_fly)) {
-        $output .= t('Backtrace: ') . wsod_get_backtrace() . $nl . $nl;
+        $output .= t('Backtrace: ') . wsod_get_backtrace() . NL . NL;
         $verbose ? print $output : watchdog('wsod', $output); // print or log the error
         return; // can't continue, if there are some fatal errors
     }
@@ -197,12 +197,12 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
 
     /* check core modules */
     if ($disabled_module = wsod_check_core_modules(array('node', 'system'))) {
-        $output .= t("Following core module is disabled: $disabled_module!").$nl;
+        $output .= t("Following core module is disabled: $disabled_module!").NL;
         if ($fix_on_fly) {
           module_enable(array($disabled_module));
           wsod_clear_caches(); // clear all caches
           module_rebuild_cache(); // rebuild paths in system table
-          $output .= t("Fixing by enabling $disabled_module core module!").$nl;
+          $output .= t("Fixing by enabling $disabled_module core module!").NL;
         }
         $verbose ? print $output : watchdog('wsod', $output); // print or log the error
         return;
@@ -210,14 +210,14 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
 
     /* check if hook_exit has been executed properly */
     if (!($wsod_exit = wsod_exit(FALSE, TRUE)) && module_exists('wsod') && arg(0) <> 'wsod') {
-        $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).$nl;
-        $output .= t('Backtrace: ') . wsod_get_backtrace() . $nl . $nl;
-        $_GET['debug'] ? $output .= wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . $nl; // DEBUG_PRINT
-        $verbose ? $nl . $nl : $output = t('If you need to debug this issue, please activate verbose mode and submit manually the invalid form and see the output.') . $nl;
+        $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).NL;
+        $output .= t('Backtrace: ') . wsod_get_backtrace() . NL . NL;
+        $_GET['debug'] ? $output .= wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . NL; // DEBUG_PRINT
+        $verbose ? NL . NL : $output = t('If you need to debug this issue, please activate verbose mode and submit manually the invalid form and see the output.') . NL;
         $verbose ? print $output : watchdog('wsod', $output); // print or log the error
         return;
     } else if (is_string($wsod_exit)) { // check if $wsod_exit contain new destination url
-      $output .= t("WSOD: Redirection to: ".drupal_get_destination()).$nl;
+      $output .= t("WSOD: Redirection to: ".drupal_get_destination()).NL;
       $verbose ? print $output : watchdog('wsod', $output); // print or log the error
       return; // ignore any action if redirection via drupal_goto() is made
     }
@@ -267,9 +267,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     if (is_null($return)) { /* check menu handler */
-        $output .= sprintf("%s: returned %s - it's very bad!", 'menu_execute_active_handler()', 'NULL') . $nl;
-        $output .= t("WSOD detected!").t('&nbsp;') . t("Checking for problems...") . $nl;
-        $output .= sprintf(t("ERROR: %s returned empty value!"), 'menu_execute_active_handler()') . $nl;
+        $output .= sprintf("%s: returned %s - it's very bad!", 'menu_execute_active_handler()', 'NULL') . NL;
+        $output .= t("WSOD detected!").t('&nbsp;') . t("Checking for problems...") . NL;
+        $output .= sprintf(t("ERROR: %s returned empty value!"), 'menu_execute_active_handler()') . NL;
         /* check theme hooks */
         $res = wsod_validate_return_hooks($verbose, $output);
         $res = wsod_validate_theme_hooks($verbose, $output);
@@ -277,18 +277,18 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             if ($fix_on_fly) {
                 wsod_clear_caches(); // clear all caches
                 module_rebuild_cache(); // rebuild paths in system table
-                $output .= t("Re-testing...").$nl;
+                $output .= t("Re-testing...").NL;
                 $res = wsod_validate_theme_hooks($verbose, $output);
                 if (!$res) {
-                    $output .= t("There is still problem related to theme hooks").$nl; // FIXME
+                    $output .= t("There is still problem related to theme hooks").NL; // FIXME
                 } else {
-                    $output .= t("Fixed?!").$nl;
+                    $output .= t("Fixed?!").NL;
                 }
             } else {
-                $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").$nl;
+                $output .= t("fix_on_fly is no enabled, please enable it to fix the problem").NL;
             }
         } else {
-            $output .= t("Validation theme hooks completed.").$nl;
+            $output .= t("Validation theme hooks completed.").NL;
         }
 
         /* check forms */
@@ -307,13 +307,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                 $output .= print_r($error,true); // show session errors
             }
         }
-        $output .= t("Done.").$nl;
+        $output .= t("Done.").NL;
     } else {
       /* Standard Drupal behavior section. */
       $title = drupal_set_title();
       if ($emergency) {
         wsod_validate_menu_router();
-        $output .= t('Menu router table rebuild!') . $nl;
+        $output .= t('Menu router table rebuild!') . NL;
       }
       switch ($return) {
         case MENU_NOT_FOUND:
@@ -321,15 +321,15 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             drupal_not_found(); // return page not found, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
-                $output .= t('MENU_NOT_FOUND: Rendered page is empty!').$nl;
+                $output .= t('MENU_NOT_FOUND: Rendered page is empty!').NL;
                 if ($fix_on_fly) {
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
-                  $output .= t('Module list refreshed!').$nl;
+                  $output .= t('Module list refreshed!').NL;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been cleared from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').NL;
                 }
             } else if (empty($title)) { // 
-                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . NL;
                 $output .= $page_output; // if nothing to show, output standard page not found
             }
         break;
@@ -338,19 +338,19 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             drupal_access_denied(); // return permission denied page , there can be some status error messages
             $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
-                $output .= t('MENU_ACCESS_DENIED: Rendered page is empty!').$nl;
+                $output .= t('MENU_ACCESS_DENIED: Rendered page is empty!').NL;
                 if ($fix_on_fly) {
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
-                  $output .= t('Module list refreshed!').$nl;
+                  $output .= t('Module list refreshed!').NL;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been cleared from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').NL;
                 }
             } else {
-                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . NL;
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
                     /* TODO: don't print it twice */
-                    // drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).$nl);
+                    // drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_ACCESS_DENIED')).NL);
                 }
             }
         break;
@@ -359,19 +359,19 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             drupal_site_offline(); // return site offline page, there can be some status error messages
             $page_output = ob_get_clean(); // get page output
             if (empty($page_output)) {
-                $output .= t('MENU_SITE_OFFLINE: Rendered page is empty!').$nl;
+                $output .= t('MENU_SITE_OFFLINE: Rendered page is empty!').NL;
                 if ($fix_on_fly) {
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
-                  $output .= t('Module list refreshed!').$nl;
+                  $output .= t('Module list refreshed!').NL;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been cleared from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').NL;
                 }
             } else {
-                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . NL;
                 $output .= $page_output; // if nothing to show, output standard page not found
                 if ($emergency) {
                     /* TODO: don't print it twice */
-                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).$nl);
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => 'MENU_SITE_OFFLINE')).NL);
                 }
             }
         break;
@@ -380,24 +380,24 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
                 /* TODO: Sometimes can't render page on shutdown, because of some errors recently
                     Like: Fatal error: Class 'content_profile_theme_variables' not found in content_profile\content_profile.module on line 585
                  */
-                //$output .= t('Ignoring page rendering checking, because of incompability with content_profile module.').$nl;
+                //$output .= t('Ignoring page rendering checking, because of incompability with content_profile module.').NL;
                 //break;
             }
             $page_output = theme('page', $return); // return page not found, there can be some status error messages
             if (empty($page_output)) {
-                $output .= t('DEFAULT: Rendered page is empty!').$nl;
+                $output .= t('DEFAULT: Rendered page is empty!').NL;
                 if ($fix_on_fly) {
                   module_list(TRUE, FALSE); // Refresh the module list to include the new enabled module. [#496198]
-                  $output .= t('Module list refreshed!').$nl;
+                  $output .= t('Module list refreshed!').NL;
                   drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-                  $output .= t('Theme registry has been cleared from cache!').$nl;
+                  $output .= t('Theme registry has been cleared from cache!').NL;
                 }
                 if ($emergency) {
                     /* TODO: don't print it twice */
-                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => "$return")).$nl);
+                    //drupal_set_message(t('%function: %handler - seems ok!', array('%function' => 'menu_execute_active_handler()', '%handler' => "$return")).NL);
                 }
             } else {
-                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . $nl;
+                $output .= t('Note: if you see duplicated page below, please disable WSOD checking in settings!') . NL;
                 $output .= $page_output; // if nothing to show, output standard page not found
             }
       }
@@ -412,25 +412,25 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       $router_item = menu_get_item($path); // get router item
       $router_callback = $router_item['page_callback'];
       if (!empty($router_callback) && !function_exists($router_callback)) { // check if page callback exist
-          $output .= sprintf("ERROR: Callback: %s() doesn't exist!" . NL, $router_item['page_callback']).$nl;
+          $output .= sprintf("ERROR: Callback: %s() doesn't exist!" . NL, $router_item['page_callback']).NL;
           drupal_rebuild_theme_registry(); // probably cached theme_registry is broken, rebuild it
-          $output .= t('Theme registry has been cleared from cache!').$nl;
+          $output .= t('Theme registry has been cleared from cache!').NL;
           wsod_rebuild_menu_router_table();
-          $output .= t('menu_router table rebuild!').$nl;
+          $output .= t('menu_router table rebuild!').NL;
       } else if (!empty($router_callback)) {
           if (!$sess_close) { // ignore 2nd call of menu handler when error occurs, in which case wsod is called again
             $res = wsod_check_page_callback($router_item, $verbose, $output, $content); // get content of page callback (inc)
               if (empty($res)) { // check if page callback returned some content
-                  $output .= sprintf("ERROR: Callback: %s() returned empty content!", $router_callback).$nl;
-                  $output .= sprintf("NOTICE: router_item = %s!", print_r($router_item, TRUE)) . $nl;
+                  $output .= sprintf("ERROR: Callback: %s() returned empty content!", $router_callback).NL;
+                  $output .= sprintf("NOTICE: router_item = %s!", print_r($router_item, TRUE)) . NL;
                   if ($fix_on_fly) { // if fix mode, then fix the errors
                       module_load_include('inc', 'system', 'system.admin'); // include functions
                       $output .= wsod_clear_caches(); // clear all caches
                       module_rebuild_cache();
-                      $output .= t('Rebuilded module cache.').$nl; // module rebuild cache
+                      $output .= t('Rebuilded module cache.').NL; // module rebuild cache
                       wsod_check_theme_registry($output); // check if theme registry is broken, then rebuild it
                   } else {
-                      $output .= t("fix_on_fly is no enabled, please enable it to fix the problem") . $nl;
+                      $output .= t("fix_on_fly is no enabled, please enable it to fix the problem") . NL;
                   }
               } else {
                 $output .= $res; // output rendered result
@@ -548,7 +548,7 @@ function wsod_rebuild_theme_registry(&$output = NULL) {
   unset($GLOBALS['theme']);
   module_implements('theme', FALSE, TRUE);
   init_theme(); // Initialize the theme system by loading the theme.
-  $output ? $output .= t('Theme registry has been rebuilt!') . $nl : NULL;
+  $output ? $output .= t('Theme registry has been rebuilt!') . NL : NULL;
 }
 
 /**
@@ -556,12 +556,12 @@ function wsod_rebuild_theme_registry(&$output = NULL) {
  *
  */
 function wsod_check_theme_registry(&$output = NULL) {
-  $output ? $output .= t('Checking theme registry...') . $nl: NULL;
+  $output ? $output .= t('Checking theme registry...') . NL: NULL;
   $hooks = theme_get_registry();
   $hook = 'placeholder'; // basic theme hook name, which should exists always in Drupal 6.x
   if (!isset($hooks[$hook])) {
-    $output ? $output .= t('Missing placeholder in theme registry!') . $nl : NULL;
-    $output ? $output .= sprintf('If problem appears again, please disable or look for invalid hook_boot code in following modules: %s', implode(', ', module_implements('boot'))) . $nl: NULL;
+    $output ? $output .= t('Missing placeholder in theme registry!') . NL : NULL;
+    $output ? $output .= sprintf('If problem appears again, please disable or look for invalid hook_boot code in following modules: %s', implode(', ', module_implements('boot'))) . NL: NULL;
     wsod_rebuild_theme_registry($output);
   }
 }

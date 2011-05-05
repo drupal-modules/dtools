@@ -51,6 +51,7 @@ if (!function_exists('wsod_check_wsod')) { // if wsod testing function doesn't e
     module_rebuild_cache(); // so we need to rebuild path of modules
     drupal_load('module', 'wsod'); // load module files again
 } // if this will not help, please check manually in your filesystem if you don't have duplicated wsod modules
+@set_time_limit(max(ini_get('max_execution_time'), 300));
 wsod_check_wsod($verbose, $fix_on_fly, TRUE, FALSE, $output); // run diagnostic
 
 /**
@@ -62,6 +63,7 @@ function wsod_set_nocache() {
   @ini_set('implicit_flush', 1);
   for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); } 
   ob_implicit_flush(1);
+  @set_time_limit(max(ini_get('max_execution_time'), 300));
 }
 
 /**
