@@ -20,6 +20,13 @@ if (!empty($drupal_path)) {
     $verbose ? print "Move this module inside your Drupal installation!": NULL;
     exit(FALSE);
 }
+// phpinfo request
+if (!empty($_GET['phpinfo'])) {
+  $output .= phpinfo();
+  $verbose ? print $output : NULL;
+  exit;
+}
+
 
 /* simulate Drupal boot */
 require_once './includes/bootstrap.inc'; // load bootstrap file
