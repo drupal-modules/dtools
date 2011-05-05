@@ -147,11 +147,19 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
       function t($msg, $args = NULL) { return $msg; }
     }
 
+    // PARSE INLINE VARIABLES
     // version request
     if (!empty($_GET['v'])) {
       $output .= t('Version:') .  WSOD_ID . NL;
       $verbose ? print $output : NULL;
       return;
+    }
+
+    // path or q
+    if (!empty($_GET['path'])) {
+      $path = $_GET['path'];
+    } elseif (arg(0) <> 'wsod') {
+      $path = $_GET['q'];
     }
 
     // CHECK FOR FATAL ERRORS  (which Drupal can't handle)
@@ -175,12 +183,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!$emergency && !variable_get('wsod_live_checking', FALSE)) {
       return;
     }
-    if (!empty($_GET['path'])) {
-      $path = $_GET['path'];
-    } elseif (arg(0) <> 'wsod') {
-      $path = $_GET['q'];
-    }
-   
+
     // ignore wsod checking on POST forms, it breaking the forms (#416616) (TODO: later it could be supported - )
     if (!empty($_POST['form_build_id']) && !variable_get('wsod_checking_on_post', FALSE)) {
         return;
@@ -212,7 +215,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!($wsod_exit = wsod_exit(FALSE, TRUE)) && module_exists('wsod') && arg(0) <> 'wsod') {
         $output .= t("hook_exit wasn't executed properly at %path, possible unexpected exit()/die()", array('%path' => $_GET['q'])).NL;
         $output .= t('Backtrace: ') . wsod_get_backtrace() . NL . NL;
-        $_GET['debug'] ? $output .= wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . NL; // DEBUG_PRINT
+        $_GET['cmd'] == 'debug' ? $output .= wsod_tick(TRUE) : $output .= t('To see more debug details you can turn on the debugger, by adding `debug` param at the end of URL.') . NL; // DEBUG_PRINT
         $verbose ? NL . NL : $output = t('If you need to debug this issue, please activate verbose mode and submit manually the invalid form and see the output.') . NL;
         $verbose ? print $output : watchdog('wsod', $output); // print or log the error
         return;
@@ -235,9 +238,9 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     }
 
     // ignore some specified callbacks (like Rebuilding permissions)
-    $_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
+    $_GET['cmd'] == 'debug' ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
     $router_item = menu_get_item();
-    $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
+    $_GET['cmd'] == 'debug' ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
     if ($router_item['page_callback'] == 'system_batch_page') {
         return;
     }
@@ -253,13 +256,13 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
     if (!$sess_close) { // ignore 2nd call of menu handler when error occurs, in which case wsod is called again
         ob_start();
         /* WARNING: register_tick_function() should not be used with threaded web server modules with PHP 5.2 or lower!!! */
-        $_GET['debug'] ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
+        $_GET['cmd'] == 'debug' ? register_tick_function('wsod_tick') : NULL; // DEBUG_ON
         $return = menu_execute_active_handler($path); // use q argument to change the default path
-        $_GET['debug'] ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
+        $_GET['cmd'] == 'debug' ? unregister_tick_function('wsod_tick') : NULL; // DEBUG_OFF
         $content_output = ob_get_clean(); // TODO: what if there is some content?
         // CHECK FOR FATAL ERRORS again
         if (wsod_fatal_error_checker($output, $fix_on_fly)) {
-            $_GET['debug'] ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+            $_GET['cmd'] == 'debug' ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
             $output = ltrim($output);
             $verbose ? print $output : watchdog('wsod', $output); // print or log the error
             return; // can't continue, if there is some fatal error
@@ -438,7 +441,7 @@ function wsod_check_wsod($verbose = FALSE, $fix_on_fly = TRUE, $emergency = FALS
             }
           }
     }
-    $_GET['debug'] ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
+    $_GET['cmd'] == 'debug' ? $output .= wsod_tick(TRUE) : NULL; // DEBUG_PRINT
     $verbose ? print (!empty($output) ? $output : '.') : NULL ; // if you see dots, that mean nothing to show (no WSOD on front page, see README.txt)
     $output = ltrim($output); // remove spaces from output
     if (!empty($output) && empty($page_output)) {
