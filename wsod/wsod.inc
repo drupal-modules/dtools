@@ -10,6 +10,10 @@
  *   Rafal Wieczorek <kenorb@gmail.com>
  */
 
+if (!defined('NL')) {
+    define('NL', "<br>\n"); // new line in messages
+} 
+
 /** 
  * Validate hooks which should returns the data, but they don't
  * 
@@ -41,32 +45,36 @@ function wsod_validate_return_hooks($verbose = FALSE, &$output) {
  */ 
 function wsod_validate_theme_hooks($verbose = FALSE, &$output) {
     $hooks = theme_get_registry(); // get list of theme hook
-    $theme_test = TRUE;
-    $nl = t('<br>');
-    $output .= t("Validating theme registry...") . $nl;
+    $output .= t("Validating theme registry...") . NL;
     if (!empty($hooks)) {
         foreach ($hooks as $hook_name => $hook) {
-            /* TODO: convert t() to sprintf() if t() is in bootstrap mode */
-            if (isset($hook['path']) && !file_exists($hook['path'])) {
-                $output .= sprintf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
-                $theme_test = FALSE;
+          $theme_test = FALSE;
+          $file = $hook['file'];
+          $paths = array('.');
+          $paths[] = $hook['path'] ? $hook['path'] : '.';
+          $paths[] = $hook['theme path'] ? $hook['theme path'] : '.';
+          foreach ($hook['theme paths'] as $key => $path) {
+            $paths[] = $path;
+          }
+          // check for correct path in theme paths
+          foreach ($paths as $key => $path) {
+            $filepath = $path . '/' . $file;
+            if (file_exists($filepath)) {
+              $theme_test = TRUE;
+              break;
             }
-            $filepath = $hook['path'] ? $hook['path'].'/'.$hook['file'] : $hook['file'];
-            if (isset($hook['file']) && !file_exists($filepath)) {
-                $output .= sprintf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['path'], $hook_name) . $nl;
-                $theme_test = FALSE;
-            }
-            if (isset($hook['theme path']) && !file_exists($hook['theme path'])) {
-                $output .= sprintf("ERROR: File or path doesn't exist (path: %s; theme callback: %s)", $hook['theme path'], $hook_name) . $nl;
-                $theme_test = FALSE;
-            }
-            if (isset($hook['access_callback']) && !function_exists($hook['access_callback'])) {
-                $output .= sprintf("ERROR: Access callback doesn't exist (callback: %s)", $hook['access_callback']) . $nl;
-                $theme_test = FALSE;
-            }
+          }
+          if (isset($hook['access_callback']) && !function_exists($hook['access_callback'])) {
+              $output .= sprintf("ERROR: Access callback doesn't exist (callback: %s)", $hook['access_callback']) . NL;
+              $theme_test = FALSE;
+          }
+          if (!$theme_test) {
+            $output .= sprintf("ERROR: File or path doesn't exist (file: %s, path: %s; theme callback: %s)", $file, print_r($paths, TRUE), $hook_name) . NL;
+            $output .= print_r($hook, TRUE) . NL;
+          }
         }
     } else {
-        $output .= t("Theme registry is empty!") . $nl;
+        $output .= "Theme registry is empty!" . NL;
         $theme_test = FALSE;
     }
     return $theme_test;
@@ -81,18 +89,17 @@ function wsod_validate_theme_hooks($verbose = FALSE, &$output) {
 function wsod_check_page_callback($router_item, $verbose = FALSE, &$messages, &$content_output) {
     $res = FALSE;
     ob_start(); // start output buffering
-    $nl = t('<br>');
     if ($router_item) {
         if ($router_item['access']) {
             if ($router_item['file']) {
                 require_once($router_item['file']);
                 $file = basename($router_item['file']);
-                $messages .= sprintf(t("Included render file: %s"), $file) . $nl; // PRINT included file
+                $messages .= sprintf(t("Included render file: %s"), $file) . NL; // PRINT included file
             }
-            $messages .= sprintf(t("Checking %s() page callback (path: %s)... (change it with q param in URL)"), $router_item['page_callback'], $_GET['q']) . $nl; // PRINT included file
+            $messages .= sprintf(t("Checking %s() page callback (path: %s)... (change it with q param in URL)"), $router_item['page_callback'], $_GET['q']) . NL; // PRINT included file
             $res = call_user_func_array($router_item['page_callback'], $router_item['page_arguments']);
         } else {
-            $messages .= sprintf(t("User permission denied to execute %s() page callback..."), $router_item['page_callback']) . $nl;
+            $messages .= sprintf(t("User permission denied to execute %s() page callback..."), $router_item['page_callback']) . NL;
         }
     }
     $content_output = ob_get_clean(); // get output

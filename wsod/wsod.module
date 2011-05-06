@@ -11,7 +11,9 @@
  */
 
 define('WSOD_BT_ARG_LIMIT', 100);
-define('NL', "<br>\n"); // new line in messages
+if (!defined('NL')) {
+  define('NL', "<br>\n"); // new line in messages
+}
 define('WSOD_ID', '$Id$');
 declare(ticks = 1);
 

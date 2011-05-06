@@ -5,7 +5,6 @@
 
   Available variables:
   (Example usage: http://mysite/sites/all/modules/dtoosl/wsod_emergency.php?cmd=debug&q=user/register)
-    ticks - number of ticks to skip (used for debugging); available values: 1, 10, 50, 100, 200, 500, 1000, 10000; higher = faster
     q - change the path (default: node)
     cmd - execute internal command
       Available commands:
@@ -21,10 +20,15 @@ $fix_on_fly  = TRUE;
 $debug  = FALSE;
 $output = '';
 
+define('NL', "<br>\n"); // new line in messages
+
 if ($locked) {
   exit;
 }
 
+declare(ticks = 1);
+
+/* doesn't work?
 if ($_GET['ticks'] == 10) {
   declare(ticks = 10);
 } else if ($_GET['ticks'] == 50) {
@@ -42,6 +46,7 @@ if ($_GET['ticks'] == 10) {
 } else {
   declare(ticks = 1);
 }
+*/
 require_once './wsod.module'; // include functions
 
 wsod_set_nocache();
