@@ -91,6 +91,8 @@ function debugger_perm() {
 
 /**
  * Implementation of hook_views_api().
+ *
+ * Note: It requires at least Views 3
  */
 function debugger_views_api() {
   return array(
@@ -151,7 +153,7 @@ function debugger_shutdown() {
 function debugger_enabled() {
   static $debugger_enabled = FALSE;
   if (!$debugger_enabled) {
-    $path = explode('/', $_GET['q']);
+    $path = !empty($_GET['q']) ? explode('/', $_GET['q']) : '/';
     $debugger_enabled = variable_get('debugger_enable', FALSE) && (!($path[0] == 'admin') || variable_get('debugger_enable_admin', FALSE));
   }
   return $debugger_enabled;

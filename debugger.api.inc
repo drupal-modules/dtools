@@ -54,7 +54,7 @@ function debugger_api_db_register_request() {
   // $query = // TODO: What here? All after '?'?
   if (!$request_id) {
     $post = serialize($_POST);
-    $path = $_GET['q'];
+    $path = !empty($_GET['q']) ? $_GET['q'] : '/';
     $query = end(explode('?', $_SERVER["REQUEST_URI"]));
     $timestamp = time();
     db_query("INSERT INTO {debugger_requests}
@@ -194,6 +194,7 @@ function debugger_api_register_backtrace($backtrace = NULL, $time = NULL, $memor
     /* CHECK PERFORMANCE */
     $module = debugger_api_module_via_file(debugger_api_get_relative_path($file));
     $new_mem = current($fncid_mem);
+    $new_time = current($fncid_slow);
     if ($memory > $new_mem[1]) { // check how much memory using this line
       $fncid_mem = array($tid => array($fncid, $memory));
     }
@@ -240,7 +241,7 @@ function debugger_api_drupal_error_handler($errno, $message, $filename, $line, $
     return $errors;
   }
   drupal_error_handler($errno, $message, $filename, $line, $context); // execute original callback
-  $types = array(1 => 'error', 2 => 'warning', 4 => 'parse error', 8 => 'notice', 16 => 'core error', 32 => 'core warning', 64 => 'compile error', 128 => 'compile warning', 256 => 'user error', 512 => 'user warning', 1024 => 'user notice', 2048 => 'strict warning', 4096 => 'recoverable fatal error');
+  $types = array(1 => 'error', 2 => 'warning', 4 => 'parse error', 8 => 'notice', 16 => 'core error', 32 => 'core warning', 64 => 'compile error', 128 => 'compile warning', 256 => 'user error', 512 => 'user warning', 1024 => 'user notice', 2048 => 'strict warning', 4096 => 'recoverable fatal error', 8192 => 'deprecated', 16384 => 'user deprecated', 30719 => 'all errors and warning');
   $errors[$types[$errno]][] = array($message, $filename, $line); // ignore $context because of memory reasons
 }
 
