@@ -1,0 +1,207 @@
+<?php
+
+/**
+ * @file
+ *   Drupal debugger analysing the performance issues on the website
+ *
+ * @version
+ *
+ * @developers
+ *   Rafal Wieczorek <kenorb@gmail.com>
+ */
+
+define('D_MIN_TIMER', 0.01);
+
+require_once 'debugger.api.inc'; // load API functions
+/*
+ * "A tick is an event that occurs for every N low-level tickable statements executed by the parser within the declare block.
+ * The value for N is specified using ticks=N within the declare blocks's directive section."
+ * You can increase this value to increase the speed, but accordingly it's less precisely
+ */
+declare(ticks = 1);
+
+/**
+ * Implementation of hook_boot().
+ * 
+ */
+function debugger_boot() {
+  if (debugger_enabled()) { // to enable it, go to: admin/settings/debugger
+    register_shutdown_function('debugger_shutdown'); // hook_exit or shutdown better?
+    debugger_check_curr_path();
+    // debugger_api_clear_data();
+    debugger_api_db_register_request(); // register error handler before Drupal does
+    if (variable_get('debugger_enable_sql_queries', FALSE)) {
+      variable_set('dev_query', TRUE); // Enable query logging
+    } else if (variable_get('dev_query', TRUE)) {
+      variable_set('dev_query', FALSE);
+    }
+    register_tick_function('debugger_tick'); // ACTIVATE debugger; if crashing, see: http://php.net/register_tick_function
+    /* change default PHP time limit */
+    require_once 'debugger.inc'; // include additional functions
+    debugger_set_time_limit(60);
+  }
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function debugger_init() {
+  if (debugger_enabled()) { // to enable it, go to: admin/settings/debugger
+    if (variable_get('debugger_enable_error_handler', TRUE)) {
+      set_error_handler('debugger_api_drupal_error_handler'); // register error handler again
+    }
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function debugger_menu() {
+/*
+  $items['admin/settings/debugger'] = array(
+    'title' => 'Debugger',
+    'description' => 'Manage Drupal debugger.',
+    'position' => 'left',
+    'weight' => 0,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer debugger'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+*/
+
+  $items['admin/settings/debugger'] = array(
+    'title' => 'Debugger Config',
+    'description' => 'Configuration of Drupal debugger.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('debugger_admin_form'),
+    'access arguments' => array('administer debugger'),
+    'file' => 'debugger.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function debugger_perm() {
+  return array('administer debugger');
+}
+
+/**
+ * Implementation of hook_views_api().
+ *
+ * Note: It requires at least Views 3
+ */
+function debugger_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'debugger') .'/views/includes',
+  );
+}
+
+/**
+ * Implementation of hook_exit().
+ */
+function debugger_exit() {
+  global $debugger_exit;
+  $debugger_exit = TRUE; // mark the exit correctly
+}
+
+/** 
+ * Implementation of register_shutdown_function PHP callback
+ *
+ */ 
+function debugger_shutdown() {
+  global $debugger_exit;
+  if (!$debugger_exit) { // If hook_exit wasn't executed, check if we are out of memory?
+    $ini_size = ini_get("memory_limit");
+    $curr_size = memory_get_usage();
+    /* convert format size to bytes */
+    switch (substr($ini_size, -1)) {
+        case 'M': case 'm': (int)$ini_size *= 1048576; break;
+        case 'K': case 'k': (int)$ini_size *= 1024; break;
+        case 'G': case 'g': (int)$ini_size *= 1073741824; break;
+    }
+    
+    if ($curr_size+1024*1024 > $ini_size) { // FIXME: FIX for 1G and more
+      print "Fatal Error: Please increase your PHP memory limit in your php.ini! Disabling...<br>\n";
+      if (variable_get('debugger_auto_disable', TRUE)) {
+        variable_set('debugger_enable', FALSE);
+      }
+      print "After that please activate Drupal debugger from settings again!<br>\n";
+    }
+  }
+  if (debugger_enabled()) {
+    if (variable_get('dev_query', TRUE) && !variable_get('debugger_enable_sql_queries', FALSE)) {
+      variable_set('dev_query', FALSE);
+    }
+    debugger_check_curr_path(); // Fix the Apache bug when current directory is changed on shutdown
+    // module_load_include('inc', 'debugger'); // include additional functions
+    // debugger_savetrace(); // save backtrace into db
+    unregister_tick_function('debugger_tick');
+    global $queries;
+    $num_sql = count($queries);
+    debugger_api_db_finish_request();
+  }
+}
+
+/** 
+ * Helper function to check if debugger should be enabled on the current page
+ */
+function debugger_enabled() {
+  static $debugger_enabled = FALSE;
+  if (!$debugger_enabled) {
+    $path = !empty($_GET['q']) ? explode('/', $_GET['q']) : '/';
+    $debugger_enabled = variable_get('debugger_enable', FALSE) && (!($path[0] == 'admin') || variable_get('debugger_enable_admin', FALSE));
+  }
+  return $debugger_enabled;
+}
+
+/**
+ * Check for Drupal root changes and fix it
+ * Note: Working directory of the script can be changed on registered shutdown function under some web servers, e.g. Apache.
+ */
+function debugger_check_curr_path() {
+  global $debugger_root_path;
+  if (!$debugger_root_path) {
+    $debugger_root_path = getcwd(); // Save current Drupal path, in case if we lose it
+  } else {
+    // Note: Working directory of the script can be changed on shutdown under some web servers, e.g. Apache.
+    $debugger_root_path <> getcwd() ? chdir($debugger_root_path) : NULL; // change it back if change has been detected
+  }
+}
+
+/** 
+ * Implementation of register_tick_function PHP callback
+ *
+ * Note: register_tick_function() should not be used with threaded web server modules with PHP 5.2 or lower.
+ * Note: microtime() - PHP 5.0.0  The get_as_float parameter was added.
+ * Note: memory_get_peak_usage() - PHP 5.2.1  Compiling with --enable-memory-limit is no longer required for this function to exist. , PHP 5.2.0  real_usage was added.
+ */ 
+function debugger_tick($ticks = FALSE) {
+  static $tick_counter = 0;
+  static $last_timer = 0, $last_memory = 0; // $debugger_trace
+  /* CALCULATE RESOURCES FROM THE LAST TIME */
+  $curr_timer = microtime(TRUE);
+  $curr_memory = function_exists('memory_get_peak_usage') ? memory_get_peak_usage() : memory_get_usage();
+  if ($last_timer && $last_memory) {
+    $time = (float)$curr_timer-$last_timer;
+    $memory = (float)$curr_memory-$last_memory;
+  } else {
+    $time = $memory = 0;
+    $last_timer = $curr_timer;
+    $last_memory = $curr_memory;
+  }
+  if ($time >= (float)variable_get('debugger_precision_time', 0.01)) {
+    debugger_api_register_backtrace(debug_backtrace(), $time, $memory, $tick_counter++, 2);
+    $last_timer = $curr_timer;
+    $last_memory = $curr_memory;
+  }
+  if ($ticks) {
+    return array($tick_counter);
+  }
+  $tick_counter++; 
+}
+

@@ -1,0 +1,408 @@
+<?php
+
+/**
+ * @file
+ *   Installation file
+ *
+ * @version
+ *
+ * @developers
+ *   Rafal Wieczorek <kenorb@gmail.com>
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function debugger_schema() {
+
+  $schema['debugger_requests'] = array(
+    'description' => t('Stores HTTP requests for Drupal debugger.'),
+    'fields' => array(
+      'rid' => array(
+        'description' => 'The primary identifier for a request.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+/* Do we need this?
+      'host' => array(
+        'description' => 'URL host of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+*/
+      'path' => array(
+        'description' => 'URL page path of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'rpath' => array(
+        'description' => 'Router menu page path of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'fid' => array(
+        'description' => 'The file identifier of menu callback.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'fncid' => array(
+        'description' => 'The function identifier of menu callback.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'mem_fncid' => array(
+        'description' => 'Function which uses the most memory for that request.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'slow_fncid' => array(
+        'description' => 'The slowest function.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'slow_qid' => array(
+        'description' => 'Query ID of the slowest db query of that request.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'query' => array(
+        'description' => 'URL page query of this entry.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'post' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'A serialized array of POST value pairs that are related to arguments passwd by posting the values by user.'),
+      'uid' => array(
+        'description' => 'The {users}.uid corresponding to a session, or 0 for anonymous user.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'time' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'The total time in miliseconds of that request.',
+      ),
+      'memory' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'The memory used in kilobytes of that request.',
+      ),
+      'num_sql' => array(
+        'description' => 'Number of sql queries of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_ticks' => array(
+        'description' => 'Number of PHP ticks executed in that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_err' => array(
+        'description' => 'Number of PHP errors of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_warn' => array(
+        'description' => 'Number of PHP warnings of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'num_notices' => array(
+        'description' => 'Number of PHP notices of that request.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'page_args' => array(
+        'description' => 'Page arguments passed for this request.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that request.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'timestamp' => array(
+        'description' => 'The Unix timestamp when the request was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0),
+    ),
+    'primary key' => array('rid'),
+    'indexes' =>
+      array(
+        'path' => array('path'),
+      ),
+  );
+
+  $schema['debugger_functions'] = array(
+    'description' => t('Stores function calls for Drupal debugger.'),
+    'fields' => array(
+      'fncid' => array(
+        'description' => 'The primary identifier for a function.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'name' => array(
+        'description' => 'A function name.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'fid' => array(
+        'description' => 'File ID where this function exists.',
+        'type' => 'int',
+        // 'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'line' => array(
+        'description' => 'The line of the file.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'args' => array(
+        'description' => 'Serialized function arguments.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'description' => array(
+        'description' => 'A description of that function.',
+        'type' => 'text',
+        'not null' => TRUE),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that function.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+    ),
+    'primary key' => array('fncid'),
+    'unique keys' => array(
+      'name_fid_line' => array('name', 'fid', 'line'),
+    ),
+    'indexes' =>
+      array(
+        'name' => array('name'),
+        'fid' => array('fid'),
+      ),
+  );
+
+  $schema['debugger_sql_queries'] = array(
+    'description' => t('Stores database queries for Drupal debugger.'),
+    'fields' => array(
+      'qid' => array(
+        'description' => 'The primary identifier of the query.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'fncid' => array(
+        'description' => 'The function identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'time' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'The current time in miliseconds of that query.',
+      'num' => array(
+        'description' => 'Average number of this sql query per request where is used.',
+        'type' => 'int',
+        'not null' => TRUE),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that query.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      ),
+    ),
+    'primary key' => array('qid'),
+  );
+
+  $schema['debugger_files'] = array(
+    'description' => t('Stores filenames for Drupal debugger.'),
+    'fields' => array(
+      'fid' => array(
+        'description' => 'The primary identifier for a file.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'filepath' => array(
+        'description' => 'Path of the file relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'module' => array(
+        'description' => 'The name of the module which file belongs to (e.g. node, drupal for core).',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that file.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+    ),
+    'primary key' => array('fid'),
+  );
+
+  $schema['debugger_traces'] = array(
+    'description' => t('Stores straces for Drupal debugger.'),
+    'fields' => array(
+      'tid' => array(
+        'description' => 'The primary identifier for a trace.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'ptid' => array(
+        'description' => 'The parent trace ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'fncid' => array(
+        'description' => 'The function identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'pfncid' => array(
+        'description' => 'The parent function ID which called this function.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'fid' => array(
+        'description' => 'The file identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'line' => array(
+        'description' => 'The line in the file of that trace.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'rid' => array(
+        'description' => 'The request identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+/*
+      'pid' => array(
+        'description' => 'The trace item parent.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+*/
+/*
+      'time' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'The current time in miliseconds of that trace.',
+      ),
+*/
+      'time_delta' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'Delta of time in miliseconds of that trace.',
+      ),
+      'mem_delta' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'The memory used in kilobytes',
+      ),
+      'args' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'A serialized array of name value pairs that are related to arguments passed to the function.'),
+      'options' => array(
+        'description' => 'Serialized additional custom options for that trace.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+    ),
+    'primary key' => array('tid'),
+    'unique keys' => array(
+      'rid_fncid_pfncid_fid_line' => array('rid', 'fncid', 'pfncid', 'fid', 'line'),
+    ),
+    'indexes' =>
+      array(
+        'fncid' => array('fncid'),
+        'pfncid' => array('pfncid'),
+        'fid' => array('fid'),
+        'rid' => array('rid'),
+      ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Test and report Drupal installation requirements.
+ *
+ * @param $phase
+ *   The current system installation phase.
+ * @return
+ *   An array of system requirements.
+ */
+function debugger_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+
+  try {
+    declare(ticks = 1);
+    // register_shutdown_function('drupal_set_message', 'Sorry!'); // Doesn't work when crashes
+    register_tick_function('debugger_test'); // FIXME: it crashes anyway, needs some better method to check it
+    unregister_tick_function('debugger_test');
+  } catch (Exception $e) {
+    watchdog('php', $e, array(), 'error'); // TODO: check the correct parameters
+  }
+// var_dump($debugger_compatible); exit;
+
+  if (!debugger_test(TRUE)) {
+    $requirements['debugger_php']['title'] = $t("PHP register_tick compatible");
+    $requirements['debugger_php']['description'] = $t("Your PHP installation doesn't support register_tick_function() on threaded web server modules with PHP 5.2 or lower, sorry.");
+    $requirements['debugger_php']['severity'] = REQUIREMENT_ERROR;
+    /* Learn more: http://php.net/register_tick_function */
+  }
+
+  return $requirements;
+}
+
+/**
+ * Test function to check if PHP installation supports register_tick_function()
+ */
+function debugger_test($return = FALSE) {
+  static $debugger_compatible = FALSE;
+  !$return ? $debugger_compatible = TRUE : NULL;
+  return $debugger_compatible;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function debugger_install() {
+  drupal_install_schema('debugger');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function debugger_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name LIKE 'debugger_%%'");
+  drupal_uninstall_schema('debugger');
+}
+
